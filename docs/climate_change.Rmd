@@ -1,0 +1,452 @@
+---
+title: "Climate change"
+author: "Lei Song"
+date: "2024-05-16"
+output: html_document
+---
+
+<style type="text/css">
+  body{
+  font-size: 16pt;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+
+library(here)
+library(sf)
+library(terra)
+library(rnaturalearth)
+library(dplyr)
+library(corrplot)
+library(lubridate)
+library(rgbif)
+library(pbmcapply)
+library(caret)
+library(biomod2)
+library(fastshap)
+library(itsdm)
+# remotes::install_github("ropensci/scrubr")
+library(scrubr)
+library(ggplot2)
+library(tidyterra)
+library(ggpubr)
+library(stringr)
+sf_use_s2(FALSE)
+
+# Get boundary
+bry <- ne_countries(scale = 10, continent = "south america") %>% 
+  st_union() %>% st_cast("POLYGON") %>% st_as_sf() %>% 
+  mutate(area = st_area(.)) %>% 
+  filter(area == max(area)) %>%  
+  rename(geometry = x) %>% select()
+```
+
+## Prepare environmental variables
+
+```{r, eval=FALSE}
+# Climatic variables
+bios <- sprintf("data/suitability/bioclim/cmcc_bioclim/BIO%s_HIST_1960_99.nc", 1:35) %>% 
+  rast() %>% crop(., bry) %>% mask(., bry)
+bios <- subset(bios, -25)
+
+vals <- values(bios)
+vals <- data.frame(vals) %>% na.omit()
+corrplot(corr = cor(vals, method = "spearman"), 
+         method = "square", type = "lower",
+         diag = FALSE, addCoef.col = "black", 
+         number.cex = 0.7, tl.cex = 0.7)
+
+# Bio 1 = Annual Mean temperature
+# Bio 4 = Temperature seasonality
+# Bio 7 = Temperature Annual Range (BIO5-BIO6)
+# Bio 12 = Annual Precipitation
+# Bio 15 = Precipitation seasonality (coefficient of variation)
+vals <- values(bios)
+vals <- data.frame(vals) %>% na.omit()
+vals <- vals %>% select(paste0("bio", c(1, 4, 7, 12, 15)))
+corrplot(corr = cor(vals, method = "spearman"), 
+         method = "square", type = "lower",
+         diag = FALSE, addCoef.col = "black", 
+         number.cex = 0.7, tl.cex = 0.7)
+
+bios <- subset(bios, c(1, 4, 7, 12, 15))
+lc <- rast("/Volumes/gazelle/future_land_projection_chen/Global\ 7-land-types\ LULC\ projection\ dataset\ under\ SSPs-RCPs/global_LULC_2015.tif")
+lc <- resample(project(lc, bios, "near"), bios, "near")
+
+# For 20 classes
+# cls <- data.frame(
+#   id = 1:20,
+#   cover = c("Water", "Broadleaf evergreen tree, tropical", 
+#             "Broadleaf evergreen tree, temperate",
+#             "Broadleaf deciduous tree, tropical",
+#             "Broadleaf deciduous tree, temperate",
+#             "Broadleaf deciduous tree, boreal",
+#             "Needleleaf evergreen tree, temperate",
+#             "Needleleaf evergreen tree, boreal",
+#             "Needleleaf deciduous tree",
+#             "Broadleaf evergreen shrub, temperate",
+#             "Broadleaf deciduous shrub, temperate",
+#             "Broadleaf deciduous shrub, boreal",
+#             "C3 grass, arctic", "C3 grass", "C4 grass",
+#             "Mixed C3/C4 grass", "Barren", "Cropland",
+#             "Urban", "Permanent snow and ice"))
+
+cls <- data.frame(
+  id = 1:7,
+  cover = c("Water", "Forest", 
+            "Grassland",
+            "Barren",
+            "Cropland",
+            "Urban",
+            "Permanent snow and ice"))
+levels(lc) <- cls
+vars <- c(bios, lc)
+
+writeRaster(vars, "data/climate_change/bioclim/current_vars.tif")
+
+# Future
+bios_future <- sprintf("data/suitability/bioclim/cmcc_bioclim/BIO%s_CMCC_85_2040_79.nc", 
+                       c(1, 4, 7, 12, 15)) %>% 
+  rast() %>% crop(., bry) %>% mask(., bry)
+fut_lc <- rast("/Volumes/gazelle/future_land_projection_chen/Global\ 7-land-types\ LULC\ projection\ dataset\ under\ SSPs-RCPs/SSP5_RCP85/global_SSP5_RCP85_2080.tif")
+fut_lc <- resample(project(fut_lc, bios, "near"), bios, "near")
+levels(fut_lc) <- cls
+fut_vars <- c(bios_future, fut_lc)
+
+writeRaster(fut_vars, "data/climate_change/bioclim/future_vars.tif")
+```
+
+## SDM
+
+```{r, eval=FALSE}
+occ_dir <- file.path("data/climate_change", 'occurrence')
+sdm_dir <- file.path("data/climate_change", "sdm")
+for (dir_to in c(occ_dir, sdm_dir)){
+    if (!dir.exists(dir_to)) dir.create(dir_to)}
+
+# Define functions
+## Query GBIF occurrences
+query_gbif <- function(species){
+    message(species)
+    
+    ## Set the time interval for querying on GBIF
+    start_year <- 2000
+    year <- sprintf('%s,%s',  start_year, year(Sys.Date()))
+    
+    # Search
+    occ <- occ_search(
+        scientificName = species,
+        # continent = "south_america",
+        hasCoordinate = TRUE,
+        limit = 200000,
+        year = year,
+        hasGeospatialIssue = FALSE)
+    
+    if (!is.null(occ$data)){
+      # Clean the dataset
+      occ <- dframe(occ$data) %>%
+        coord_impossible() %>%
+        coord_incomplete() %>%
+        coord_unlikely()
+      
+      # Convert to sf
+      occ <- st_as_sf(
+        occ[, c("decimalLongitude", "decimalLatitude")], 
+        coords = c("decimalLongitude", "decimalLatitude"),
+        crs = 4326)
+      rm(start_year, year)
+      
+      fn <- file.path(occ_dir, sprintf("%s.geojson", gsub(" ", "_", species)))
+      st_write(occ, fn)
+    }
+}
+
+## Fit SDM with different parameters
+fit_sdm_em <- function(species){
+    message(species)
+    
+    # Read variables, range map and occurrence
+    vars <- rast("data/climate_change/bioclim/current_vars.tif") %>% 
+      subset(., -6)
+    vars_future <- rast("data/climate_change/bioclim/future_vars.tif") %>% 
+      subset(., -6)
+    
+    # Make a non-NA mask
+    msk <- lapply(1:nlyr(vars), function(n) !is.na(vars[[n]]))
+    msk <- sum(do.call(c, msk)) == nlyr(vars)
+    msk[msk == 0] <- NA
+    
+    # Range map
+    range_map <- rast(
+        file.path("data/IUCN_AOH_100m/mammals",
+                  sprintf("%s.tif", gsub(" ", "_", species))))
+    range_map <- range_map <- (resample(range_map, msk, method = "near") %>% 
+                                 subst(., NA, 0))* msk
+    
+    # Dynamically make pseudo samples of 1000
+    set.seed(123) # make sure variability for each parameter pair
+    pseudo_occ <- spatSample(
+      range_map, 500, method = "stratified", na.rm = TRUE, 
+      as.point = TRUE, exhaustive = TRUE) %>% st_as_sf()
+    
+    fname <- file.path(occ_dir, 
+                  sprintf("%s.geojson", gsub(" ", "_", species)))
+    if (file.exists(fname)){
+      # Read occurrences
+      occ <- st_read(fname)
+      occ <- rasterize(occ, vars[[1]]) * msk
+      occ <- as.points(occ) %>% st_as_sf() # thinned
+      names(occ) <- names(pseudo_occ) <- c("observation", "geometry")
+      obs_data <- rbind(occ, pseudo_occ)
+    } else {
+      names(pseudo_occ) <- c("observation", "geometry")
+      obs_data <- pseudo_occ
+    }
+
+    obs_data <- BIOMOD_FormatingData(
+      resp.var = obs_data$observation,
+      expl.var = vars,
+      dir.name = sdm_dir,
+      resp.xy = st_coordinates(obs_data),
+      resp.name = species)
+    
+    models <- BIOMOD_Modeling(
+      bm.format = obs_data,
+      models = c("GAM", "GBM", "MARS", "MAXNET", "RF"),
+      modeling.id = "allModels",
+      CV.strategy = "kfold",
+      CV.nb.rep = 2,
+      CV.perc = 0.7,
+      CV.k = 3,
+      seed.val = 123,
+      nb.cpu = 12)
+    
+    model_em <- BIOMOD_EnsembleModeling(
+      bm.mod = models, # model list from previous step
+      models.chosen = "all", # use all of the models
+      em.by = "all",
+      em.algo = c('EMwmean'),
+      metric.select = c('TSS'),
+      metric.select.thresh = c(0.7),
+      metric.eval = c("KAPPA", "TSS", "ROC"),
+      nb.cpu = 12)
+    
+    model_proj <- BIOMOD_EnsembleForecasting(
+      bm.em = model_em,
+      proj.name = "Current",
+      new.env = vars,
+      models.chosen = "all",
+      metric.binary = "all",
+      metric.filter = "all",
+      nb.cpu = 12)
+    
+    model_proj_future <- BIOMOD_EnsembleForecasting(
+      bm.em = model_em,
+      proj.name = "Future",
+      new.env = vars_future,
+      models.chosen = "all",
+      metric.binary = "all",
+      metric.filter = "all",
+      nb.cpu = 12)
+    
+    pred <- get_predictions(model_proj)
+    pred_future <- get_predictions(model_proj_future)
+    
+    fn <- file.path(sdm_dir, sprintf("current_suit_%s.tif", gsub(" ", "_", species)))
+    writeRaster(pred, fn)
+    
+    fn <- file.path(sdm_dir, sprintf("future_suit_%s.tif", gsub(" ", "_", species)))
+    writeRaster(pred_future, fn)
+    
+    # Get spatial SHAP
+    pfun <- function(X.model, newdata) {
+      predict(X.model, newdata, type = "prob")[, "1"] # RF
+      # predict(X.model, newdata, type = "cloglog") # Maxnet
+    }
+    
+    # Take one model for test
+    mod_to_load <- models@models.computed[str_detect(models@models.computed, "allData_allRun_RF")]
+    BIOMOD_LoadModels(models, mod_to_load)
+    mod_nm <- sprintf("%s_allData_allRun_RF", gsub(" ", ".", species))
+    
+    new_data <- values(vars_future) %>% na.omit() %>% data.frame()
+    shap_explain <- explain(
+      get(mod_nm)@model,
+      X = obs_data@data.env.var,
+      newdata = new_data,
+      nsim = 200,
+      pred_wrapper = pfun)
+    
+    fut_shap <- vars_future
+    vals <- values(fut_shap)
+    vals[complete.cases(vals), ] <- shap_explain
+    values(fut_shap) <- vals
+    
+    fn <- file.path(sdm_dir, sprintf("future_shap_%s.tif", gsub(" ", "_", species)))
+    writeRaster(fut_shap, fn)
+    
+    new_data <- values(vars) %>% na.omit() %>% data.frame()
+    shap_explain <- explain(
+      get(mod_nm)@model,
+      X = obs_data@data.env.var,
+      newdata = new_data,
+      nsim = 200,
+      pred_wrapper = pfun)
+    
+    cur_shap <- vars
+    vals <- values(cur_shap)
+    vals[complete.cases(vals), ] <- shap_explain
+    values(cur_shap) <- vals
+    
+    fn <- file.path(sdm_dir, sprintf("current_shap_%s.tif", gsub(" ", "_", species)))
+    writeRaster(cur_shap, fn)
+}
+
+# Get species
+mammals <- st_read("/Users/pinot/Library/CloudStorage/Dropbox/research/comTCA/data/expert_range_maps/MAMMALS_TERRESTRIAL_ONLY/MAMMALS_TERRESTRIAL_ONLY.shp")
+mammals <- mammals %>% filter(category %in% c("EN", "CR")) %>% 
+  filter(presence %in% 1:3) %>% filter(origin == 1)
+mammals <- mammals %>% filter(freshwater == "false") %>% 
+  filter(is.na(island))
+
+fnames <- list.files("data/IUCN_AOH_100m/mammals")
+fnames <- gsub(".tif", "", fnames)
+fnames <- gsub("_", " ", fnames)
+mammals <- mammals %>% filter(sci_name %in% fnames)
+
+mammals <- mammals %>% slice(unique(unlist(st_intersects(bry, .))))
+mammals <- mammals %>% arrange(-SHAPE_Area) %>% slice(1:15)
+
+species_list <- unique(mammals$sci_name)
+
+for (species in species_list){
+  query_gbif(species)
+  fit_sdm_em(species)
+}
+```
+
+## Anlalyze the results
+
+Take Annual Precipitation (Bio 12) as an example
+
+```{r}
+# Current
+fnames <- list.files("data/climate_change/sdm", full.names = TRUE,
+                     pattern = "current_shap")
+cur_shap_bio12 <- do.call(c, lapply(fnames, function(fname){
+  rast(fname) %>% subset(4)
+}))
+cur_shap_bio12 <- mean(cur_shap_bio12, na.rm = TRUE)
+
+# Future
+fnames <- list.files("data/climate_change/sdm", full.names = TRUE,
+                     pattern = "future_shap")
+fut_shap_bio12 <- do.call(c, lapply(fnames, function(fname){
+  rast(fname) %>% subset(4)
+}))
+fut_shap_bio12 <- mean(fut_shap_bio12, na.rm = TRUE)
+
+# Plot
+g1 <- ggplot() +
+  geom_spatraster(data = cur_shap_bio12[[2]]) +
+  scale_fill_whitebox_c(
+    name = "SHAP Value",
+    palette = "muted",
+    n.breaks = 10, limits = c(-0.3, 0.3),
+    guide = guide_legend(reverse = TRUE)
+  ) + ggtitle("Annual precipitation (current)") +
+  theme_void()
+
+g2 <- ggplot() +
+  geom_spatraster(data = fut_shap_bio12[[2]]) +
+  scale_fill_whitebox_c(
+    name = "SHAP Value",
+    palette = "muted",
+    n.breaks = 10, limits = c(-0.3, 0.3),
+    guide = guide_legend(reverse = TRUE)
+  ) + ggtitle("Annual precipitation (future)") +
+  theme_void()
+
+# Check change
+fnames <- list.files("data/climate_change/sdm", full.names = TRUE,
+                     pattern = "current_shap")
+
+## Direction change
+dir_change_bio12 <- do.call(c, lapply(fnames, function(fname){
+  cur <- rast(fname) %>% subset(4)
+  fut <- rast(gsub("current", "future", fname)) %>% subset(4)
+  
+  ((cur >= 0) + 1) * ((fut >= 0) + 3)
+}))
+
+dir_change_bio12 <- do.call(c, lapply(c(3, 4, 6, 8), function(x){
+  lyrs <- do.call(c, lapply(dir_change_bio12, function(lyr){
+    lyr == x
+  }))
+  
+  mean(lyrs) * 100
+}))
+names(dir_change_bio12) <- c("N to N", "N to P", "P to N", "P to P")
+
+# Value change
+val_change_bio12 <- lapply(fnames, function(fname){
+  cur <- rast(fname) %>% subset(4)
+  fut <- rast(gsub("current", "future", fname)) %>% subset(4)
+  pos_msk <- cur >= 0
+  pos_msk[pos_msk == 0] <- NA
+  neg_msk <- cur < 0
+  neg_msk[neg_msk == 0] <- NA
+  
+  chg <- (fut - cur)
+  lyrs <- c(mask(chg, pos_msk), mask(chg, neg_msk))
+  names(lyrs) <- c("P", "N")
+  
+  lyrs
+})
+
+val_change_bio12 <- do.call(c, lapply(c("P", "N"), function(x){
+  lyrs <- do.call(c, lapply(val_change_bio12, function(lyr){
+    lyr[[x]]
+  }))
+  
+  mean(lyrs, na.rm = TRUE)
+}))
+names(val_change_bio12) <- c("Suitable", "Non-suitable")
+```
+
+## Check spatial variable importance
+
+```{r}
+ggplot() +
+  geom_spatraster(data = dir_change_bio12) +
+  facet_wrap(~lyr, nrow = 1) +
+  scale_fill_whitebox_c(
+    name = "(% of 20 species)",
+    palette = "muted",
+    n.breaks = 10,
+    guide = guide_legend(reverse = TRUE)
+  ) + 
+  theme_void() +
+  theme(strip.text = element_text(size = 14))
+
+ggsave("figures/bio12_change_direction.png",
+       width = 16, height = 5, dpi = 500)
+
+ggplot() +
+  geom_spatraster(data = val_change_bio12) +
+  facet_wrap(~lyr, nrow = 1) +
+  scale_fill_whitebox_c(
+    name = "Change (Unitless)",
+    palette = "muted",
+    n.breaks = 10, limits = c(-0.1, 0.1),
+    guide = guide_legend(reverse = TRUE)
+  ) + 
+  theme_void() +
+  theme(strip.text = element_text(size = 14))
+
+ggsave("figures/bio12_change.png",
+       width = 8, height = 5, dpi = 500)
+```
+
