@@ -450,3 +450,10 @@ ggsave("figures/bio12_change.png",
        width = 8, height = 5, dpi = 500)
 ```
 
+```{r}
+pr <- rast("/Users/pinot/Downloads/CHELSA_pr_1981-2010_V.2.1.nc", 
+           lyrs = 1) %>% project(crs(hex_grids))
+pr <- terra::zonal(x = pr, z = vect(hex_grids), fun = "mean", 
+                   na.rm = TRUE, as.polygons = TRUE)
+```
+

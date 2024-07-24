@@ -1,0 +1,57 @@
+---
+title: "Computation resources"
+author: "Lei Song"
+date: "2024-06-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is an internal document for myself to record the available campus computing resources that I can use.
+
+## knot7
+
+address: knot7.cnsi.ucsb.edu
+
+Resources:
+
+```
+PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
+batch*       up   infinite      1 drain* node54
+batch*       up   infinite     29  down* node[3,10,19,27,32,43,50,60,66-86]
+batch*       up   infinite      4  drain node[4,8,15,51]
+batch*       up   infinite     39  alloc node[7,9,11-14,16-18,20-23,25,28-29,31,33-42,46-48,52,56-59,62-65]
+batch*       up   infinite      9   down node[2,5,24,26,30,49,53,55,61]
+short        up    1:00:00      1   down node6
+largemem     up 32-00:00:0      2  down* node[93-94]
+largemem     up 32-00:00:0      1    mix node92
+largemem     up 32-00:00:0      1  alloc node91
+```
+
+## pod (newer)
+
+address: pod-login1.cnsi.ucsb.edu
+
+Resources: 
+
+[1-63]: dual 20 cores
+[101-104]: dual 20 cores with 1.4T RAM
+[111-113,115-125]: 4 V100 GPUs 40GB RAM
+
+```
+PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
+batch*       up 58-08:00:0      1  drain node54
+batch*       up 58-08:00:0     22    mix node[7-8,14-17,19,22-25,27-28,33,35-36,38,41-43,46,55]
+batch*       up 58-08:00:0     39  alloc node[1-6,9-13,18,20-21,26,29-32,34,37,39-40,44-45,47-53,57-63]
+short        up    2:00:00      1  alloc node56
+short        up    2:00:00      1   idle node64
+largemem     up 37-12:00:0      1  drain node103
+largemem     up 37-12:00:0      3    mix node[101-102,104]
+gpu          up 10-00:00:0     14    mix node[111-113,115-125]
+aws          up    2:00:00      1 drain* aws-node-8
+aws          up    2:00:00      3  drain aws-node-[6-7,10]
+aws          up    2:00:00      4  idle~ aws-node-[1-4]
+aws          up    2:00:00      2  down~ aws-node-[5,9]
+```
