@@ -88,7 +88,7 @@ nums <- sapply(occ_num$fname, function(fname){
     st_read(fname) %>% nrow()
 })
 occ_num <- occ_num %>% mutate(num = nums) %>% 
-    filter(num >= 10); rm(nums)
+    filter(num >= 20); rm(nums)
 
 # Clean occurrences of filtered species
 vars <- rast(file.path("data/env", "chelsa_1981-2010.tif"))
@@ -120,7 +120,7 @@ for (i in 1:nrow(occ_num)){
     stats <- .statsStorage(species, type = "PPM", toDo = NULL)
     occ_new <- format_occ(occ, range_map, vars, stats, dirs)
     
-    if (nrow(occ_new) > 10){
+    if (nrow(occ_new) > 20){
         st_write(occ_new, file.path(dst_dir, sprintf("%s.geojson", gsub(" ", "_", species))))
     }
 }

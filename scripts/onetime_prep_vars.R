@@ -1,4 +1,4 @@
-# Prepare environmetnal variables
+# Prepare environmental variables
 # Lei Song, lsong@ucsb.edu
 
 # Load libraries
