@@ -137,7 +137,7 @@ It is not recommended to mix-use conda-forge and base R package installation due
 # In command line
 conda install anaconda::gfortran_linux-64
 
-# Get in R environment
+# In R environment
 devtools::install_github("pepbioalerts/occTest")
 devtools::install_github("brshipley/megaSDM")
 ```
@@ -146,9 +146,18 @@ devtools::install_github("brshipley/megaSDM")
 
 Follow the [tutorial](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) to add the server's SSH key to GitHub Authentication keys so you can clone private repositories.
 
-### Step 6: Install BIENWorkflow 
+### Step 6: Install BIENWorkflow
 
 Install the private R package `BIENWorkflow` and verify the installation. To address issues from the retirement of the spatial packages (`rgdal`, `rgeos`, `maptools`, and the associated`gdalUtils`), I made a few updates on `BIENWorkflow`:
 
 1. Update the functions from `rgdal`, `rgeos` to `sf`.
 2. Use `gdalUtilities` as a replacement for the outdated `gdalUtils`. 
+
+Then
+
+```
+# In R environment
+remotes::install_github("cmerow/trinaryMaps")
+# I fork the repo and update under this version
+devtools::install_github("LLeiSong/BIENWorkflow", auth_token = "PAT")
+```

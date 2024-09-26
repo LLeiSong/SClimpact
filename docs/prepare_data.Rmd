@@ -1,0 +1,75 @@
+---
+title: "prepare_data"
+author: "Lei Song"
+date: "2024-09-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+library(here)
+library(kableExtra)
+library(ggplot2)
+# devtools::install_github("davidsjoberg/ggsankey")
+library(ggsankey)
+library(dplyr)
+library(circlize)
+```
+
+## Occurrences
+
+Due to various considerations, we decided to use the occurrence records hosted on [GBIF](https://www.gbif.org) as the reference for species distribution modeling (SDM). However, recognizing the known issues and limitations in these datasets, we applied several data filtering steps to ensure the quality and reliability of the records. The details of these filtering steps will be introduced progressively.
+
+### Data query
+
+Since our focus is solely on mammalian species, we query occurrence records specifically for mammals. The `query_gbif` function can be utilized to efficiently retrieve a large amount of data from [GBIF](https://www.gbif.org).
+
+```{r query_gbif}
+# Query occurrences for all mammalian species from GBIF.
+occ_get <- query_gbif(taxon = "Mammals", occ_dir = here("data/occurrences"))
+```
+
+### Data filter
+#### Internal filtering during querying
+
+[GBIF API](https://techdocs.gbif.org/en/openapi/) now allows users to apply filters when querying data, which can help refine searches and exclude unwanted data. In our case, when using the function `query_gbif`, we applied a few meta filters to remove records that are not relevant to our analysis. These filters include:
+
+1. Zero coordinate: Coordinates are exactly (0,0). null island.
+2. Country coordinate mismatch: The coordinates fall outside of the given country’s polygon.
+3. Coordinate invalid: GBIF is unable to interpret the coordinates.
+4. Coordinate out of range: The coordinates are outside of the range for decimal lat/lon values ((-90,90), (-180,180)).
+5. Only keep PRESENT records.
+6. Remove FOSSIL_SPECIMEN and LIVING_SPECIMEN.
+
+#### Extra filtering after querying
+
+Function `filter_gbif` applies a few steps (refers to GBIF data [blog1](https://data-blog.gbif.org/post/downloading-long-species-lists-on-gbif/) and [blog2](https://data-blog.gbif.org/post/gbif-filtering-guide/)) to filter the queried occurrences further. These filters include:
+
+- Meta filter: 
+
+  1. Remove old records (before 1900).
+  2. Remove records with high uncertainty (coordinatePrecision >= 0.01 and  coordinateUncertaintyInMeters >= 10000).
+  3. Remove possible GeoLocate centroids for coordinateUncertaintyInMeters (301,3036,999,9999).
+  4. Remove points plotted along the prime meridian or equator (decimalLatitude == 0 or decimalLongitude == 0).
+  5. Remove possible remove country centroids within 2km, capitals centroids within 2km, zoo and herbaria within 2km, and points within the ocean using package `CoordinateCleaner`.
+  6. Remove the exact duplicated records.
+  
+- Filter spatial outliers: We only retain occurrences that fall within the [AOH maps](https://doi.org/10.1038/s41597-022-01838-w) of each species.
+- Filter environmental outliers and spatial thinning: This step is not applied in the `filter_gbif` function but is instead incorporated within the modeling workflow, as it requires access to the environmental layers.
+
+```{r filter_gbif}
+# Query AOH for mammals
+query_aoh(taxon = "Mammals", aoh_dir = here("data/IUCN_AOH_100m"))
+
+# Filter the queried occurrences.
+filter_gbif(x = occ_get, occ_dir = here("data/occurrences"),
+            aoh_dir = here("data/IUCN_AOH_100m/Mammals"))
+```
+
+## Environmental layers
+
+We used bioclimatic variables from 1981–2010, 2011–2040, 2041–2070, and 2071–2100 sourced from [CHELSA Bioclim](https://chelsa-climate.org/bioclim/).
+
+```{r query_env}
+
+```
