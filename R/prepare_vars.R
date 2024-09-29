@@ -22,9 +22,14 @@ prepare_vars <- function(clim_dir,
                          lc_dir,
                          dst_dir,
                          verbose = TRUE){
+    orig_setting <- terraOptions()
+    terraOptions(memfrac = 0.8, tempdir = "data/temp")
+    if (!dir.exists("data/temp")){
+        dir.create("data/temp")}
+    
     # clim_dir <- '/Volumes/gazelle/CHELSA_V2/GLOBAL/climatologies'
     # lc_dir <- "/Volumes/gazelle/future_land_projection_chen/Global\
-    # 7-land-types\ LULC\ projection\ dataset\ under\ SSPs-RCPs"
+    #  7-land-types\ LULC\ projection\ dataset\ under\ SSPs-RCPs"
     
     # Check inputs
     assert_class(clim_dir, "character")
@@ -42,17 +47,23 @@ prepare_vars <- function(clim_dir,
     
     for (dr in c(env_dir, otherenv_dir)){
         if (!dir.exists(dr)) dir.create(dr)}
+    
+    # Define the template for global
+    template <- rast(xmin = -20037508.34, xmax = 20037508.34, 
+                     ymin = -20048966.1, ymax = 20048966.1,
+                     crs = "EPSG:3857", resolution = 10000)
 
     # Download the terrestrial boundary
     bry <- ne_countries(scale = 50, type = "countries", returnclass = "sf") %>% 
-        filter(continent != "Antarctica") # remove Antarctica
+        filter(continent != "Antarctica") %>% # remove Antarctica
+        st_transform(crs(template))
     
     # Define meta parameters
     years <- c("1981-2010", "2011-2040", "2041-2070", "2071-2100")
     mods <- c("GFDL-ESM4", "UKESM1-0-LL", "MPI-ESM1-2-HR", 
               "IPSL-CM6A-LR", "MRI-ESM2-0")
     ssps <- c("ssp126", 'ssp370', "ssp585")
-    vars <- c(sprintf("bio%s", 1:19), "gst", "gsp")
+    vars <- sprintf("bio%s", 1:19)
     
     for (yr in years){
         # base condition
@@ -64,10 +75,11 @@ prepare_vars <- function(clim_dir,
                 sprintf("CHELSA_%s_%s_V.2.1.tif", vars, yr))
             clim <- rast(file.path(data_dir))
             names(clim) <- vars
+            clim <- project(clim, template, 
+                            method = "bilinear", threads = TRUE)
             
             # Land cover
             lc <- rast(file.path(lc_dir, "global_LULC_2015.tif"))
-            lc <- project(lc, clim[[1]], method = "near")
             
             # Transit land cover
             # Select Forest (forest and shrub), Grassland, Cropland, Urban
@@ -78,6 +90,11 @@ prepare_vars <- function(clim_dir,
                     lc == 5 | lc == 6
                 } else lc == ty
             })); names(lc) <- c("forest", "grassland", "human_impact")
+            
+            area <- !is.na(lc[[1]])
+            area <- project(area, template, method = "sum", threads = TRUE)
+            lc <- project(lc, template, method = "sum", threads = TRUE)
+            lc <- lc / area
             
             # Put together
             clim <- c(clim, lc)
@@ -91,7 +108,7 @@ prepare_vars <- function(clim_dir,
                         row.names = FALSE, col.names = FALSE)
             
             # Collect garbage
-            gc()
+            tmpFiles(current = TRUE, remove = TRUE); gc()
             
         # Future conditions
         } else {
@@ -110,6 +127,8 @@ prepare_vars <- function(clim_dir,
                                 vars, yr, tolower(mod), ssp))
                     clim <- rast(file.path(data_dir))
                     names(clim) <- vars
+                    clim <- project(clim, template, 
+                                    method = "bilinear", threads = TRUE)
                     
                     # Land cover
                     yr_lc <- strsplit(yr, "-")[[1]][2]
@@ -121,7 +140,6 @@ prepare_vars <- function(clim_dir,
                     lc <- rast(file.path(
                         lc_dir, ssp_lc, 
                         sprintf("global_%s_%s.tif", ssp_lc, yr_lc)))
-                    lc <- project(lc, clim[[1]], method = "near")
                     
                     # Transit land cover
                     # Select Forest, Grassland, Cropland, Urban
@@ -132,6 +150,13 @@ prepare_vars <- function(clim_dir,
                             lc == 5 | lc == 6
                         } else lc == ty
                     })); names(lc) <- c("forest", "grassland", "human_impact")
+                    
+                    area <- !is.na(lc[[1]])
+                    area <- project(area, template, 
+                                    method = "sum", threads = TRUE)
+                    lc <- project(lc, template, 
+                                  method = "sum", threads = TRUE)
+                    lc <- lc / area
                     
                     # Put together
                     clim <- c(clim, lc)
@@ -146,9 +171,13 @@ prepare_vars <- function(clim_dir,
                     writeRaster(clim, fname)
                     
                     # Collect garbage
-                    gc()
+                    tmpFiles(current = TRUE, remove = TRUE); gc()
                 }
             }
         }
     }
+    
+    # Turn the options back
+    unlink("data/temp", recursive = TRUE)
+    terraOptions(memfrac = orig_setting$memfrac, tempdir = orig_setting$tempdir)
 }

@@ -156,7 +156,7 @@ filter_gbif <- function(
     
     # Save cleaned occ
     fname <- file.path(
-        occ_dir, sprintf("occurrences_noaoh_%s", 
+        occ_dir, sprintf("occurrences_beforeaoh_%s", 
                          gsub(".zip", ".csv", basename(x))))
     write.csv(occ, fname, row.names = FALSE)
     
