@@ -1,5 +1,5 @@
 ---
-title: "prepare_data"
+title: "Prepare occurrences, range maps and environmental variables"
 author: "Lei Song"
 date: "2024-09-17"
 output: html_document
@@ -66,10 +66,85 @@ filter_gbif(x = occ_get, occ_dir = here("data/occurrences"),
             aoh_dir = here("data/IUCN_AOH_100m/Mammals"))
 ```
 
-## Environmental layers
+### Prepare CSVs and separate range maps
 
-We used bioclimatic variables from 1981–2010, 2011–2040, 2041–2070, and 2071–2100 sourced from [CHELSA Bioclim](https://chelsa-climate.org/bioclim/).
+One key challenge in this step is matching the scientific names across different versions of the [Mammal Diversity Database (MDD)](https://zenodo.org/records/6407053).  In this process, we cross-match the scientific names between occurrences and range maps, then separate the occurrences into individual CSV files and the range maps into GEOJSON files.
+
+```{r}
+# Set some paths and directories
+range_path <- here("data/IUCN/MAMMALS/MAMMALS.shp")
+occ_path <- here("data/occurrences/occurrences_clean_0018860-240906103802322.csv")
+sp_catalog_path <- here("data/occurrences/species_catalog_0018860-240906103802322.csv")
+occ_dir <- here("data/occurrences/CSVs")
+range_dir <- here("data/IUCN/Expert_Maps")
+
+# Call the function
+prepare_range(range_path, occ_path, sp_catalog_path, occ_dir, range_dir)
+```
+
+## Environmental layers
+### Data sources
+
+We used bioclimatic variables (BIO 1-19) from the periods 1981–2010, 2011–2040, 2041–2070, and 2071–2100, sourced from [CHELSA Bioclim](https://chelsa-climate.org/bioclim/). CHELSA provides data across five models and three scenarios:
+
+**Models:**
+
+- GFDL-ESM4
+- UKESM1-0-LL
+- MPI-ESM1-2-HR
+- IPSL-CM6A-LR
+- MRI-ESM2-0
+
+**Scenarios:**
+
+- SSP 126
+- SSP 370
+- SSP 585
+
+We also used the projected future LULC dataset made by [Chen et al. (2022)](https://www.nature.com/articles/s41597-022-01208-6), which provides land use and land cover maps from 2015 to 2100 at 5-year intervals under various SSP-RCP scenarios.
+
+**Land classification:**
+
+- 1 - Water
+- 2 - Forest
+- 3 - Grassland
+- 4 - Barren
+- 5 - Cropland
+- 6 - Urban
+- 7 - Permanent snow and ice
+
+**Scenarios:**
+
+- SSP1_RCP19
+- SSP1_RCP26
+- SSP2_RCP45
+- SSP3_RCP70
+- SSP4_RCP34
+- SSP4_RCP60
+- SSP5_RCP34
+- SSP5_RCP85
+
+We selected SSP1_RCP26, SSP3_RCP70, and SSP5_RCP85 to match the corresponding climate variable scenarios. We paired the year 2015 with 1981–2010 as the base condition, 2040 with 2011–2040, 2070 with 2041–2070, and 2100 with 2071–2100.
+
+### Processing
+
+To highlight the global-scale signals and make the computation efficient, we conduct the analysis at the scale of 10 km with [Pseudo-Mercator projection (EPSG:3857)](https://epsg.io/3857). The global template is defined as following:
+
+```{r template}
+template <- rast(xmin = -20037508.34, xmax = 20037508.34, 
+                 ymin = -20048966.1, ymax = 20048966.1,
+                 crs = "EPSG:3857", resolution = 10000)
+```
+
+The bioclimatic variables were calculated using the bilinear mean, while land cover was calculated based on the coverage of associated land cover types. To simplify the analysis and reduce potential bias from rare land cover types, we aggregated several categories: Forest to represent forest change (note that the original land cover map includes shrubs under forest), Grassland to represent low vegetation change, and Cropland and Urban to represent human impact.
+
+The environmental variables are prepared as following:
 
 ```{r query_env}
-
+clim_dir <- '/Volumes/gazelle/CHELSA_V2/GLOBAL/climatologies'
+lc_dir <- file.path(
+    "/Volumes/gazelle/future_land_projection_chen/Global",
+    " 7-land-types\ LULC\ projection\ dataset\ under\ SSPs-RCPs")
+dst_dir <- "data/variables"
+prepare_vars(clim_dir, lc_dir, dst_dir, FALSE)
 ```

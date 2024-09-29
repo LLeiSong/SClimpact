@@ -31,10 +31,9 @@
 #' sp_catalog_path <- here("data/occurrences/species_catalog_0018860-240906103802322.csv")
 #' occ_dir <- here("data/occurrences/CSVs")
 #' range_dir <- here("data/IUCN/Expert_Maps")
-#' prepare_range("Mammals")
+#' prepare_range(range_path, occ_path, sp_catalog_path, occ_dir, range_dir)
 #' }
 #' 
-
 prepare_range <- function(range_path,
                           occ_path,
                           sp_catalog_path,
