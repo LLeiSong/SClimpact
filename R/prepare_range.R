@@ -93,7 +93,13 @@ prepare_range <- function(range_path,
                  error = function(e){
                      # With delays for the API
                      Sys.sleep(120)
-                     nm_sd <- rl_species(genus, species)})
+                     tryCatch(nm_sd <- rl_species(genus, species),
+                              error = function(e){
+                                  # With delays for the API
+                                  Sys.sleep(240)
+                                  nm_sd <- rl_species(genus, species)
+                              })
+                 })
         synonyms <- nm_sd$taxon$synonyms
         
         if (!is.null(nrow(synonyms))){
