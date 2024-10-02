@@ -82,6 +82,8 @@ range_dir <- here("data/IUCN/Expert_Maps")
 prepare_range(range_path, occ_path, sp_catalog_path, occ_dir, range_dir)
 ```
 
+After this step, there are 2480 species left in the analysis.
+
 ## Environmental layers
 ### Data sources
 
@@ -147,6 +149,14 @@ lc_dir <- file.path(
     " 7-land-types\ LULC\ projection\ dataset\ under\ SSPs-RCPs")
 dst_dir <- "data/variables"
 prepare_vars(clim_dir, lc_dir, dst_dir, FALSE)
+```
+
+## Environmental subsampling occurrences
+
+Several studies have demonstrated that subsampling occurrences across environmental space can improve modeling accuracy and stability. Therefore, we included this step in our workflow as well.
+
+```{r}
+
 ```
 
 ## Environmental variable selection

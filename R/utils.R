@@ -147,7 +147,7 @@ buf_polygon <- function(occ, buffer_dist = NA){
 }
 
 # Function to sample occurrences using environmental bins
-varela_sample_occ <- function (dat, no_bin) {
+varela_sample_occ <- function (dat, no_bin = 25) {
     out_ptz <- dat[, 1:2]
     for(i in 3:length(names(dat))) {
         # Cut into bins
@@ -172,7 +172,7 @@ varela_sample_occ <- function (dat, no_bin) {
     no_grps <- nrow(sub_ptz)
     # add a column with the group membership number; this number is arbitrary
     sub_ptz$grp <- c(1:no_grps)
-    out_ptz <- left_join(out_ptz, sub_ptz)
+    out_ptz <- suppressMessages(left_join(out_ptz, sub_ptz))
     
     final_out <- lapply(1:no_grps, function(i){
         grp_mbrs <- out_ptz[out_ptz$grp == i, c(1, 2)]
@@ -347,45 +347,46 @@ var_remove_cor <- function(env,
                            predictorsToKeepNoMatterWhat,
                            tieRule = 'last',
                            corThreshold = .7){
-    out=try({
-        if(!is.null(predictorsToKeepNoMatterWhat)){
-            keepers <- which(names(env) %in% predictorsToKeepNoMatterWhat)
+    if(!is.null(predictorsToKeepNoMatterWhat)){
+        keepers <- which(names(env) %in% predictorsToKeepNoMatterWhat)
+        if (length(keepers) > 0){
             envToKeep <- env[keepers]
             env <- env[-keepers]
         }
-        c1 <- suppressWarnings(cor(env, use = 'complete.obs'))		
-        tossed <- NULL
-        bad <- which(apply(c1, 1, function(x){
-            all(is.na(x)) | all(is.nan(x)) | all(is.null(x)) | sum(x,na.rm=T)==1
-        }))
-        
-        if(length(bad)>0){
-            tossed=c(tossed,names(bad)) 
-            c1.index=which(colnames(c1) %in% tossed)
-            c1=c1[-c1.index,-c1.index]
+    }
+    c1 <- suppressWarnings(cor(env, use = 'complete.obs'))		
+    tossed <- NULL
+    bad <- which(apply(c1, 1, function(x){
+        all(is.na(x)) | all(is.nan(x)) | all(is.null(x)) | sum(x,na.rm=T)==1
+    }))
+    
+    if(length(bad)>0){
+        tossed=c(tossed,names(bad)) 
+        c1.index=which(colnames(c1) %in% tossed)
+        c1=c1[-c1.index,-c1.index]
+    }
+    # number of variables a variable is too correlated with
+    too.cor <- apply(abs(c1) > corThreshold, 1, sum) - 1
+    
+    while(any(too.cor>=1)){
+        most.cor=too.cor[too.cor==max(too.cor)]
+        if(tieRule=='last') {
+            toss=tail(most.cor, 1)
+        } else if(tieRule=='random'){
+            toss=sample(1:length(most.cor),1)
         }
-        # number of variables a variable is too correlated with
-        too.cor <- apply(abs(c1) > corThreshold,1,sum) - 1 # since diagonal always 1
-        
-        while(any(too.cor>=1)){
-            most.cor=too.cor[too.cor==max(too.cor)]
-            if(tieRule=='last') {
-                toss=tail(most.cor, 1)
-            } else if(tieRule=='random'){
-                toss=sample(1:length(most.cor),1)
-            }
-            tossed=c(tossed,names(toss)) 
-            c1.index=which(colnames(c1) %in% names(toss))
-            c1=c1[-c1.index,-c1.index]
-            too.cor=apply(abs(c1)>corThreshold,1,sum)-1
-        }
-        if(!is.null(tossed)){
-            env=env[-which(names(env) %in% tossed)]
-        } else {tossed='none' }
-        if(!is.null(predictorsToKeepNoMatterWhat)){
+        tossed=c(tossed,names(toss)) 
+        c1.index=which(colnames(c1) %in% names(toss))
+        c1=c1[-c1.index,-c1.index]
+        too.cor=apply(abs(c1)>corThreshold,1,sum)-1
+    }
+    if(!is.null(tossed)){
+        env=env[-which(names(env) %in% tossed)]
+    } else {tossed='none' }
+    if(!is.null(predictorsToKeepNoMatterWhat)){
+        if (length(keepers) > 0){
             env <- cbind(envToKeep, env)
-        }	
-        env
-    })
-    names(out)
+        }
+    }	
+    names(env)
 }

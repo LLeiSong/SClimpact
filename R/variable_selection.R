@@ -23,7 +23,7 @@
 #' @export
 #' @examples
 #' \donttest{
-#' sp <- "Puma yagouaroundi"
+#' sp <- "Puma_yagouaroundi"
 #' var_path <- "data/variables/Env/AllEnv.tif"
 #' occ_dir <- "data/occurrences"
 #' aoh_dir <- "data/IUCN_AOH_100m/Mammals"
@@ -32,19 +32,20 @@
 #' var_selection(sp, var_path, occ_dir, aoh_dir, dst_dir, 123)
 #' }
 #' 
-var_selection <- function(sp = "Puma yagouaroundi",
+var_selection <- function(sp = "Puma_yagouaroundi",
                           var_path = "data/variables/Env/AllEnv.tif",
                           occ_dir = "data/occurrences",
                           aoh_dir = "data/IUCN_AOH_100m/Mammals", 
                           dst_dir = "data/variables/variable_list",
                           tmp_dir = "data/tmp",
-                          seed = 123){
+                          seed = 123,
+                          iter = 20){
     # Check the input
     assert_class(sp, "character")
     assert_class(var_path, "character")
     assert_class(occ_dir, "character")
     assert_class(dst_dir, "character")
-    assert_class(seed, "numeric")
+    assert_class(seed, "integer")
     
     # Create the dst_dir
     if (!dir.exists(dst_dir)) dir.create(dst_dir)
@@ -57,7 +58,7 @@ var_selection <- function(sp = "Puma yagouaroundi",
     
     # presences
     occ <- read.csv(
-        file.path(occ_dir, "CSVs", sprintf("%s.csv", gsub(" ", "_", sp))))
+        file.path(occ_dir, "CSVs", sprintf("%s.csv", sp)))
     occ <- st_as_sf(occ, coords = c("lon", "lat"), crs = 4326) %>% 
         st_transform(crs(vars))
     
@@ -71,7 +72,7 @@ var_selection <- function(sp = "Puma yagouaroundi",
     aoh_path <- read.csv(
         file.path(occ_dir,
                   "species_catalog_0018860-240906103802322.csv")) %>% 
-        filter(species == sp)
+        filter(species == gsub("_", " ", sp))
     
     ## Load AOH
     aoh <- sprc(lapply(aoh_path$AOH_name, function(fn){
@@ -80,7 +81,7 @@ var_selection <- function(sp = "Puma yagouaroundi",
     
     ## Resample AOH using mode
     writeRaster(
-        aoh, file.path(tmp_dir, sprintf("aoh_%s.tif", gsub(" ", "_", sp))), 
+        aoh, file.path(tmp_dir, sprintf("aoh_%s.tif",sp)), 
         datatype = "INT1U")
     te <- ext(occ_buf); tr <- res(occ_buf)
     options_warp <- paste0(
@@ -91,68 +92,94 @@ var_selection <- function(sp = "Puma yagouaroundi",
                " -tr %s %s %s %s %s -r mode"),
         crs(occ_buf, describe = TRUE)$code,
         te[1], te[3], te[2], te[4], tr[1], tr[2], 
-        options_warp, file.path(tmp_dir, sprintf("aoh_%s.tif", gsub(" ", "_", sp))), 
-        file.path(tmp_dir, sprintf("aoh_rsp_%s.tif", gsub(" ", "_", sp))))
+        options_warp, file.path(tmp_dir, sprintf("aoh_%s.tif", sp)), 
+        file.path(tmp_dir, sprintf("aoh_rsp_%s.tif", sp)))
     system(command)
     
     ## Mask the buffered occurrences
     occ_buf <- mask(
-        occ_buf, rast(file.path(tmp_dir, sprintf("aoh_rsp_%s.tif", gsub(" ", "_", sp)))), 
+        occ_buf, rast(file.path(tmp_dir, sprintf("aoh_rsp_%s.tif", sp))), 
         inverse = TRUE)
     
     ## Remove the temporary files
-    file.remove(file.path(tmp_dir, sprintf("aoh_%s.tif", gsub(" ", "_", sp))))
-    file.remove(file.path(tmp_dir, sprintf("aoh_rsp_%s.tif", gsub(" ", "_", sp))))
+    file.remove(file.path(tmp_dir, sprintf("aoh_%s.tif", sp)))
+    file.remove(file.path(tmp_dir, sprintf("aoh_rsp_%s.tif", sp)))
     
     # Remove presence
     occ_exist <- rasterize(occ, occ_buf)
     occ_buf <- mask(occ_buf, occ_exist, inverse = TRUE)
     vars_buf <- mask(crop(vars, occ_buf), occ_buf)
-    bg <- spatSample(vars_buf, nrow(occ), na.rm = TRUE, xy = TRUE)
     
-    # Environmental subsampling occurrences
-    occ <- terra::extract(vars, occ, bind = TRUE)
-    coords <- geom(occ)
-    occ <- data.frame(x = coords[, "x"], y = coords[, "y"]) %>% 
-        cbind(as.data.frame(occ) %>% 
-                  dplyr::select(-c(gbif_id, sp))) %>% na.omit()
+    set.seed(seed)
+    seeds <- sample(1:100, iter)
     
-    # Only if the deduction won't change the number significance
-    if (nrow(occ) >= 20){
-        dat <- varela_sample_occ(occ, 100)
-        if (nrow(dat) >= 20) occ <- dat; rm(dat)
-        occ <- occ %>% select(-c(x, y))
+    vars_voted <- do.call(rbind, lapply(seeds, function(seed){
+        set.seed(seed)
+        bg <- spatSample(vars_buf, nrow(occ), na.rm = TRUE, xy = TRUE)
         
-        dat <- varela_sample_occ(bg, 100)
-        if (nrow(dat) >= 20) bg <- dat; rm(dat)
+        # Environmental subsampling occurrences
+        occ <- terra::extract(vars, occ, bind = TRUE)
+        coords <- geom(occ)
+        occ <- data.frame(x = coords[, "x"], y = coords[, "y"]) %>% 
+            cbind(as.data.frame(occ) %>% 
+                      dplyr::select(-c(gbif_id, sp))) %>% na.omit()
+        
+        # Only if the deduction won't change the number significance
+        if (nrow(occ) >= 20){
+            dat <- varela_sample_occ(occ, 100)
+            if (nrow(dat) >= 20) occ <- dat; rm(dat)
+            
+            dat <- varela_sample_occ(bg, 100)
+            if (nrow(dat) >= 20) bg <- dat; rm(dat)
+        }
+        
+        occ <- occ %>% select(-c(x, y))
         bg <- bg %>% select(-c(x, y))
+        dat <- rbind(occ %>% mutate(presence = 1),
+                     bg %>% mutate(presence = 0))
+        
+        # Start to diagnose the variables using BARTs
+        set.seed(seed)
+        vars_selected <- var_diagnose(
+            dat[, setdiff(names(dat), c("presence", "x", "y"))], 
+            dat[, "presence"], n.trees = 10, iter = 50)
+        
+        data.frame(var = vars_selected, seed = seed)
+    }))
+    
+    ## Rearrange variables based on the voting results
+    vars_selected <- vars_voted %>% group_by(var) %>% 
+        summarise(n = n()) %>% 
+        filter(n >= ceiling(iter * 0.5)) %>% 
+        arrange(-n) %>% pull(var)
+    
+    if (length(vars_selected) == 0){
+        vars_selected <- vars_voted %>% group_by(var) %>% 
+            summarise(n = n()) %>% 
+            filter(n == max(n)) %>% 
+            pull(var)
     }
     
-    dat <- rbind(occ %>% mutate(presence = 1),
-                 bg %>% mutate(presence = 0))
-    
-    # Start to diagnose the variables using BARTs
-    set.seed(seed)
-    vars_selected <- var_diagnose(
-        dat[, setdiff(names(dat), c("presence", "x", "y"))], 
-        dat[, "presence"], n.trees = 10, iter = 200)
-    
     # Step 2: Remove highly correlated variables
-    # Reload presences
-    occ <- read.csv(
-        file.path(occ_dir, "CSVs", sprintf("%s.csv", gsub(" ", "_", sp))))
-    occ <- st_as_sf(occ, coords = c("lon", "lat"), crs = 4326) %>% 
-        st_transform(crs(vars))
+    if (length(vars_selected) > 3){
+        # Reload presences
+        occ <- read.csv(
+            file.path(occ_dir, "CSVs", sprintf("%s.csv", sp)))
+        occ <- st_as_sf(occ, coords = c("lon", "lat"), crs = 4326) %>% 
+            st_transform(crs(vars))
+        
+        # Remove highly correlated variables
+        vars_occ <- terra::extract(vars[[vars_selected]], occ, ID = FALSE) %>% 
+            na.omit()
+        vars_thin <- var_remove_cor(vars_occ, c("bio1", "bio12"))
+    } else {
+        vars_thin <- vars_selected
+    }
     
-    # Remove highly correlated variables
-    vars_occ <- terra::extract(vars[[vars_selected]], occ, ID = FALSE) %>% 
-        na.omit()
-    vars_thin <- var_remove_cor(vars_occ, c("bio1", "bio12"))
-    
-    fname <- file.path(dst_dir, sprintf("%s.csv", gsub(" ", "_", sp)))
     sq <- seq(max(length(vars_selected), length(vars_thin)))
-    write.csv(
-        data.frame(var = vars_selected[sq], 
-                   var_uncorrelated = vars_thin[sq]), 
-        fname, row.names = FALSE)
+    data.frame(var = vars_selected[sq], 
+               var_uncorrelated = vars_thin[sq])
+    
+    fname <- file.path(dst_dir, sprintf("%s.csv", sp))
+    write.csv(vars, fname, row.names = FALSE)
 }

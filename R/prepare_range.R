@@ -65,6 +65,10 @@ prepare_range <- function(range_path,
     
     # Load species list
     sp_records <- read.csv(occ_path)
+    numbers <- sp_records %>% group_by(species) %>% summarise(n = n())
+    numbers <- numbers %>% filter(n >= 15)
+    sp_records <- sp_records %>% filter(species %in% unique(numbers$species))
+    
     species_catalog <- read.csv(sp_catalog_path) %>% 
         filter(species %in% unique(sp_records$species))
     
