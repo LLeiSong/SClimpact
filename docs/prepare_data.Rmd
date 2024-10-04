@@ -151,17 +151,9 @@ dst_dir <- "data/variables"
 prepare_vars(clim_dir, lc_dir, dst_dir, FALSE)
 ```
 
-## Environmental subsampling occurrences
-
-Several studies have demonstrated that subsampling occurrences across environmental space can improve modeling accuracy and stability. Therefore, we included this step in our workflow as well.
-
-```{r}
-
-```
-
 ## Environmental variable selection
 
-To enhance model reliability, it is recommended to diagnose variables for each species individually. We incorporated this step into our workflow using Bayesian Additive Regression Trees (BARTs). The script can run as the following:
+To enhance model reliability, it is recommended to diagnose variables for each species individually. We incorporated this step into our workflow using Bayesian Additive Regression Trees (BARTs). We randomly selected an equal number of pseudo-absence points to pair with presence points and applied BART to iteratively reduce the variables. This process was repeated for 30 iterations, and the most frequently used variables were selected. Highly correlated variables (correlation coefficient > 0.7) were subsequently removed. The script can be executed both locally or remotely on servers as follows:
 
 ```{r}
 library(pbmcapply)
@@ -181,6 +173,34 @@ pbmclapply(species_list, function(sp){
 ```
 
 We ran this step on HPC:
+
+```{r}
+# slurm submission
+root_dir <- "/home/lsong/SCImpact/data"
+species_list <- list.files(file.path(root_dir, "occurrences/CSVs"))
+species_list <- gsub(".csv", "", species_list)
+fnames <- list.files(file.path(root_dir, "variables/variable_list"))
+fnames_to_move <- list.files(file.path(root_dir, "variables/variable_list"),
+                             pattern = "allruns.csv")
+fnames <- setdiff(fnames, fnames_to_move)
+fnames <- gsub(".csv", "", fnames)
+species_list <- setdiff(species_list, fnames)
+
+chunk_length <- 8
+species_list <- split(
+    species_list, ceiling(seq_along(species_list) / chunk_length))
+
+for (i in 1:length(species_list)){
+    sp <- species_list[[i]]
+    sp <- paste(sp, collapse = ",")
+    print(sp)
+    system(sprintf("sbatch schedulers/select_variable.sh %s", sp))
+}
+```
+
+## Environmental subsampling occurrences and sampling background samples
+
+Several studies have demonstrated that subsampling occurrences across environmental space can improve modeling accuracy and stability. Therefore, we included this step in our workflow as well.
 
 ```{r}
 

@@ -35,11 +35,12 @@
 var_selection <- function(sp = "Puma_yagouaroundi",
                           var_path = "data/variables/Env/AllEnv.tif",
                           occ_dir = "data/occurrences",
+                          range_dir = "data/IUCN/Expert_Maps",
                           aoh_dir = "data/IUCN_AOH_100m/Mammals", 
                           dst_dir = "data/variables/variable_list",
                           tmp_dir = "data/tmp",
                           seed = 123,
-                          iter = 20){
+                          iter = 30){
     # Check the input
     assert_class(sp, "character")
     assert_class(var_path, "character")
@@ -64,7 +65,9 @@ var_selection <- function(sp = "Puma_yagouaroundi",
     
     # Step 1: Detect the most contributing variables
     # Generate random background points for variable checking
-    occ_buf <- buf_polygon(occ)
+    range <- st_read(file.path(range_dir, sprintf("%s.geojson", sp))) %>% 
+        st_transform(crs(vars))
+    occ_buf <- make_domain(occ, range); rm(range)
     occ_buf <- terra::rasterize(occ_buf, vars[[1]]) %>% terra::trim()
     
     # AOH masking
@@ -115,7 +118,9 @@ var_selection <- function(sp = "Puma_yagouaroundi",
     
     vars_voted <- do.call(rbind, lapply(seeds, function(seed){
         set.seed(seed)
-        bg <- spatSample(vars_buf, nrow(occ), na.rm = TRUE, xy = TRUE)
+        bg <- spatSample(
+            vars_buf, min(nrow(occ), global(vars_buf, fun = "notNA")[[1]]), 
+            na.rm = TRUE, xy = TRUE)
         
         # Environmental subsampling occurrences
         occ <- terra::extract(vars, occ, bind = TRUE)
@@ -147,10 +152,13 @@ var_selection <- function(sp = "Puma_yagouaroundi",
         data.frame(var = vars_selected, seed = seed)
     }))
     
+    fname <- file.path(dst_dir, sprintf("%s_allruns.csv", sp))
+    write.csv(vars_voted, fname, row.names = FALSE)
+    
     ## Rearrange variables based on the voting results
     vars_selected <- vars_voted %>% group_by(var) %>% 
         summarise(n = n()) %>% 
-        filter(n >= ceiling(iter * 0.5)) %>% 
+        filter(n >= floor(iter * 0.5)) %>% 
         arrange(-n) %>% pull(var)
     
     if (length(vars_selected) == 0){
@@ -177,9 +185,9 @@ var_selection <- function(sp = "Puma_yagouaroundi",
     }
     
     sq <- seq(max(length(vars_selected), length(vars_thin)))
-    data.frame(var = vars_selected[sq], 
-               var_uncorrelated = vars_thin[sq])
+    vars_candicates <- data.frame(var = vars_selected[sq], 
+                                  var_uncorrelated = vars_thin[sq])
     
     fname <- file.path(dst_dir, sprintf("%s.csv", sp))
-    write.csv(vars, fname, row.names = FALSE)
+    write.csv(vars_candicates, fname, row.names = FALSE)
 }

@@ -144,6 +144,45 @@ buf_polygon <- function(occ, buffer_dist = NA){
     # Makes a buffer (width dependent) around the first occurrence point
     combinedPolygon <- buffer(occ, BufferWidth)
     combinedPolygon <- aggregate(combinedPolygon)
+    
+    return(combinedPolygon)
+}
+
+# Combine both range and buffered occurrences
+make_domain <- function(occ, range, buffer_dist = NA){
+    # Convert to terra
+    occ <- vect(occ)
+    range <- vect(range)
+    
+    # Check
+    if (crs(occ) != crs(range)){
+        range <- project(range, crs(occ))
+    }
+    
+    if(is.na(terra::linearUnits(occ))){
+        stop("The spatial units of the data cannot be found!")}
+    
+    if (is.na(buffer_dist)) {
+        # Uses the 95% quantile of the minimum distance between each point
+        Distance <- terra::distance(occ)
+        Distance <- as.matrix(Distance)
+        mindist <- c()
+        for (q in 1:ncol(Distance)) {
+            DistanceZero <- Distance[which(Distance[, q] > 0), q]
+            mindist <- c(mindist, min(DistanceZero))}
+        BufferWidth <- 2 * stats::quantile(mindist, 0.95)
+        rm(Distance, mindist); gc()
+    } else {
+        BufferWidth <- buffer_dist
+    }
+    
+    # Makes a buffer (width dependent) around the first occurrence point
+    occ_buf <- buffer(occ, BufferWidth)
+    range_buf <- buffer(range, BufferWidth)
+    combinedPolygon <- rbind(occ_buf, range_buf)
+    combinedPolygon <- aggregate(combinedPolygon)
+    
+    return(combinedPolygon)
 }
 
 # Function to sample occurrences using environmental bins
@@ -346,47 +385,49 @@ background_sampling <- function(sp_name,
 var_remove_cor <- function(env,
                            predictorsToKeepNoMatterWhat,
                            tieRule = 'last',
-                           corThreshold = .7){
-    if(!is.null(predictorsToKeepNoMatterWhat)){
+                           corThreshold = .7) {
+    if (!is.null(predictorsToKeepNoMatterWhat)) {
         keepers <- which(names(env) %in% predictorsToKeepNoMatterWhat)
-        if (length(keepers) > 0){
+        if (length(keepers) > 0) {
             envToKeep <- env[keepers]
             env <- env[-keepers]
         }
     }
-    c1 <- suppressWarnings(cor(env, use = 'complete.obs'))		
+    c1 <- suppressWarnings(cor(env, use = 'complete.obs'))
     tossed <- NULL
-    bad <- which(apply(c1, 1, function(x){
-        all(is.na(x)) | all(is.nan(x)) | all(is.null(x)) | sum(x,na.rm=T)==1
+    bad <- which(apply(c1, 1, function(x) {
+        all(is.na(x)) | all(is.nan(x)) | all(is.null(x)) | sum(x, na.rm = T) == 1
     }))
     
-    if(length(bad)>0){
-        tossed=c(tossed,names(bad)) 
-        c1.index=which(colnames(c1) %in% tossed)
-        c1=c1[-c1.index,-c1.index]
+    if (length(bad) > 0) {
+        tossed = c(tossed, names(bad))
+        c1.index = which(colnames(c1) %in% tossed)
+        c1 = c1[-c1.index, -c1.index]
     }
     # number of variables a variable is too correlated with
     too.cor <- apply(abs(c1) > corThreshold, 1, sum) - 1
     
-    while(any(too.cor>=1)){
-        most.cor=too.cor[too.cor==max(too.cor)]
-        if(tieRule=='last') {
-            toss=tail(most.cor, 1)
-        } else if(tieRule=='random'){
-            toss=sample(1:length(most.cor),1)
+    while (any(too.cor >= 1)) {
+        most.cor = too.cor[too.cor == max(too.cor)]
+        if (tieRule == 'last') {
+            toss = tail(most.cor, 1)
+        } else if (tieRule == 'random') {
+            toss = sample(1:length(most.cor), 1)
         }
-        tossed=c(tossed,names(toss)) 
-        c1.index=which(colnames(c1) %in% names(toss))
-        c1=c1[-c1.index,-c1.index]
-        too.cor=apply(abs(c1)>corThreshold,1,sum)-1
+        tossed = c(tossed, names(toss))
+        c1.index = which(colnames(c1) %in% names(toss))
+        c1 = c1[-c1.index, -c1.index]
+        too.cor = apply(abs(c1) > corThreshold, 1, sum) - 1
     }
-    if(!is.null(tossed)){
-        env=env[-which(names(env) %in% tossed)]
-    } else {tossed='none' }
-    if(!is.null(predictorsToKeepNoMatterWhat)){
-        if (length(keepers) > 0){
+    if (!is.null(tossed)) {
+        env = env[-which(names(env) %in% tossed)]
+    } else {
+        tossed = 'none'
+    }
+    if (!is.null(predictorsToKeepNoMatterWhat)) {
+        if (length(keepers) > 0) {
             env <- cbind(envToKeep, env)
         }
-    }	
+    }
     names(env)
 }
