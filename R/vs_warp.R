@@ -6,7 +6,7 @@ library(dplyr)
 library(optparse)
 select <- dplyr::select
 source("/home/lsong/SCImpact/R/utils.R")
-source("/home/lsong/SCImpact/R/variable_selection.R")
+source("/home/lsong/SCImpact/R/var_selection.R")
 
 option_list <- list(
     make_option(c("-s", "--sp"), 

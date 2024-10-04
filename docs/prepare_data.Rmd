@@ -203,5 +203,12 @@ for (i in 1:length(species_list)){
 Several studies have demonstrated that subsampling occurrences across environmental space can improve modeling accuracy and stability. Therefore, we included this step in our workflow as well.
 
 ```{r}
-
+src_dir <- "data/occurrences/CSVs"
+var_dir <- "data/variables"
+range_dir <- "data/IUCN/Expert_Maps"
+occ_dir <- "data/occurrences/CSVs_thin"
+bg_dir <- "data/occurrences/bg"
+env_sampling(src_dir, var_dir, range_dir, occ_dir, bg_dir)
 ```
+
+After completing these steps, the occurrence and background samples are ready for modeling. I am confident that the occurrences and environmental variables have been thoroughly examined and properly processed.
