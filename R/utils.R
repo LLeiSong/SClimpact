@@ -164,14 +164,19 @@ make_domain <- function(occ, range, buffer_dist = NA){
     
     if (is.na(buffer_dist)) {
         # Uses the 95% quantile of the minimum distance between each point
-        Distance <- terra::distance(occ)
-        Distance <- as.matrix(Distance)
-        mindist <- c()
-        for (q in 1:ncol(Distance)) {
-            DistanceZero <- Distance[which(Distance[, q] > 0), q]
-            mindist <- c(mindist, min(DistanceZero))}
-        BufferWidth <- 2 * stats::quantile(mindist, 0.95)
-        rm(Distance, mindist); gc()
+        err_detect <- try({
+            Distance <- terra::distance(occ)
+            Distance <- as.matrix(Distance)
+            mindist <- c()
+            for (q in 1:ncol(Distance)) {
+                DistanceZero <- Distance[which(Distance[, q] > 0), q]
+                mindist <- c(mindist, min(DistanceZero))}
+            BufferWidth <- 2 * stats::quantile(mindist, 0.95)
+            rm(Distance, mindist); gc()
+        }, silent = TRUE)
+        
+        if (inherits(err_detect, "try-error")) BufferWidth <- 10000 # one pixel
+        
     } else {
         BufferWidth <- buffer_dist
     }
@@ -383,14 +388,13 @@ background_sampling <- function(sp_name,
 
 # Remove correlated variables
 var_remove_cor <- function(env,
-                           predictorsToKeepNoMatterWhat,
+                           preferedPredictors,
                            tieRule = 'last',
                            corThreshold = .7) {
-    if (!is.null(predictorsToKeepNoMatterWhat)) {
-        keepers <- which(names(env) %in% predictorsToKeepNoMatterWhat)
+    if (!is.null(preferedPredictors)) {
+        keepers <- which(names(env) %in% preferedPredictors)
         if (length(keepers) > 0) {
-            envToKeep <- env[keepers]
-            env <- env[-keepers]
+            env <- cbind(env[keepers], env[-keepers])
         }
     }
     c1 <- suppressWarnings(cor(env, use = 'complete.obs'))
@@ -417,17 +421,10 @@ var_remove_cor <- function(env,
         tossed = c(tossed, names(toss))
         c1.index = which(colnames(c1) %in% names(toss))
         c1 = c1[-c1.index, -c1.index]
-        too.cor = apply(abs(c1) > corThreshold, 1, sum) - 1
+        if (length(c1) == 1){
+            if (c1 == 1) break
+        } else too.cor = apply(abs(c1) > corThreshold, 1, sum) - 1
     }
-    if (!is.null(tossed)) {
-        env = env[-which(names(env) %in% tossed)]
-    } else {
-        tossed = 'none'
-    }
-    if (!is.null(predictorsToKeepNoMatterWhat)) {
-        if (length(keepers) > 0) {
-            env <- cbind(envToKeep, env)
-        }
-    }
+    if (!is.null(tossed)) env = env[-which(names(env) %in% tossed)]
     names(env)
 }

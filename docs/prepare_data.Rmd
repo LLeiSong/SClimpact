@@ -172,7 +172,7 @@ pbmclapply(species_list, function(sp){
 }, mc.cores = 10)
 ```
 
-We ran this step on HPC:
+We ran this step on HPC (see details in `tools/slurm_submit_vs.R`):
 
 ```{r}
 # slurm submission
@@ -200,15 +200,41 @@ for (i in 1:length(species_list)){
 
 ## Environmental subsampling occurrences and sampling background samples
 
-Several studies have demonstrated that subsampling occurrences across environmental space can improve modeling accuracy and stability. Therefore, we included this step in our workflow as well.
+Several studies have demonstrated that subsampling occurrences across environmental space can improve modeling accuracy and stability. Therefore, we included this step in our workflow as well. For background samples, we first extracted a large number (60000) of [**target-group-background (TGB)**](https://rvalavi.github.io/SDMwithRFs/), then environmentally thinned them.
 
 ```{r}
 src_dir <- "data/occurrences/CSVs"
 var_dir <- "data/variables"
 range_dir <- "data/IUCN/Expert_Maps"
+region_dir <- "data/terr-ecoregions-TNC"
 occ_dir <- "data/occurrences/CSVs_thin"
 bg_dir <- "data/occurrences/bg"
-env_sampling(src_dir, var_dir, range_dir, occ_dir, bg_dir)
+env_sampling(src_dir, var_dir, range_dir, region_dir, occ_dir, bg_dir)
 ```
 
-After completing these steps, the occurrence and background samples are ready for modeling. I am confident that the occurrences and environmental variables have been thoroughly examined and properly processed.
+We also ran this step on HPC to save time (see details in `tools/slurm_submit_es.R`):
+
+```{r}
+# slurm submission
+root_dir <- "/home/lsong/SCImpact/data"
+
+species <- list.files(file.path(root_dir, "occurrences/CSVs"))
+species <- gsub(".csv", "", species)
+species2 <- list.files(file.path(root_dir, "variables", "variable_list"))
+species2 <- gsub(".csv", "", species2)
+species <- intersect(species, species2)
+
+message(sprintf("%s species to process.", length(species)))
+
+chunk_length <- 100
+species_list <- split(
+    species, ceiling(seq_along(species) / chunk_length))
+
+for (i in 1:2){
+    sp <- species_list[[i]]
+    sp <- paste(sp, collapse = ",")
+    system(sprintf("sbatch schedulers/env_sampling.sh %s", sp))
+}
+```
+
+After completing these steps, the occurrence and background samples are ready for modeling. We are confident that the occurrences and environmental variables have been thoroughly examined and properly processed.

@@ -26,6 +26,8 @@ tmp_dir <- file.path(root_dir, "tmp")
 seed <- as.integer(123)
 
 for (sp in sp_list){
-    var_selection(sp, var_path, occ_dir, range_dir, 
-                  aoh_dir, dst_dir, tmp_dir, seed)
+    tryCatch({
+        var_selection(sp, var_path, occ_dir, range_dir, 
+                      aoh_dir, dst_dir, tmp_dir, seed)
+        }, error = function(e){print(e)})
 }

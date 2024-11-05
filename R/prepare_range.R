@@ -165,8 +165,13 @@ prepare_range <- function(range_path,
     # All good
     bnm_sciname <- bnm_sciname %>% na.omit()
     
+    # Save out as querying this is time consuming and full of unexpected risks
+    fname <- file.path(dirname(occ_dir), "species_name_catalog.csv")
+    write.csv(bnm_sciname, fname, row.names = FALSE)
+    
     # Cook the range for each species
     # Clean the csv at the same time
+    sf_use_s2(FALSE)
     walk(sort(unique(sp_records$species)), function(sp){
         message(sp)
         bnm <- species_catalog %>% filter(species == sp)
@@ -174,6 +179,10 @@ prepare_range <- function(range_path,
         
         sp_range <- ranges %>% filter(sci_name %in% range_nms$sci_name) %>% 
             select(sci_name)
+        
+        # # In case to fix some too complex polygons
+        # sp_range <- sp_range %>% ms_simplify() %>% 
+        #     st_make_valid()
         
         if (nrow(sp_range) > 0){
             fname <- file.path(

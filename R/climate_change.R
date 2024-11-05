@@ -96,10 +96,10 @@ climate_change <- function(lyr_nm, template){
     fnames <- list.files(dst_dir, full.names = TRUE,
                          pattern = "current_shap") %>% 
         data.frame(fname = .) %>% 
-        mutate(species = gsub("current_suit_", "", basename(fname))) %>% 
+        mutate(species = gsub("current_shap_", "", basename(fname))) %>% 
         mutate(species = gsub(".tif", "", species)) %>% 
         mutate(species = gsub("_", " ", species)) %>% 
-        filter(species %in% species_list) %>% pull(fnames)
+        filter(species %in% species_list) %>% pull(fname)
     
     ## Direction change
     dir_change <- do.call(c, lapply(fnames, function(fname){
