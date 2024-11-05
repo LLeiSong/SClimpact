@@ -237,4 +237,4 @@ for (i in 1:2){
 }
 ```
 
-After completing these steps, the occurrence and background samples are ready for modeling. We are confident that the occurrences and environmental variables have been thoroughly examined and properly processed.
+After completing these steps, the occurrence and background samples are ready for modeling. We are confident that the occurrences and environmental variables have been thoroughly examined and properly processed. Check `species_distribution_modeling.Rmd` for the details of modeling.

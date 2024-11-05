@@ -1,0 +1,21 @@
+---
+title: "Species distribution modeling"
+author: "Lei Song"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Prior
+
+The system should be configured according to the instructions in `setup_hpc_environment.Rmd`, and the data has been processed as outlined in `prepare_data.Rmd`.
+
+## Important sections
+### Down-sampled Random Forest (RF)
+
+### Cross validation
+
+### Model assessment
