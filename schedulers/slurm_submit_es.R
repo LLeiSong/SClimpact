@@ -28,3 +28,20 @@ for (i in 1:length(species_list)){
     sp <- paste(sp, collapse = ",")
     system(sprintf("sbatch schedulers/env_sampling.sh %s", sp))
 }
+
+# When all species are done, run this:
+fnames <- list.files(file.path(root_dir, "occurrences", "CSVs_thin"), 
+                     full.names = TRUE)
+## Get the numbers
+nums <- lapply(fnames, function(fname){
+    occ <- read.csv(fname)
+    bg <- read.csv(gsub("CSVs_thin", "bg", fname))
+    data.frame(species = gsub(".csv", "", basename(fname)),
+               num_occ = nrow(occ),
+               num_bg = nrow(bg))
+}) %>% bind_rows()
+
+## Only keep the species with >=20 occurrences
+nums <- nums %>% filter(num_occ >= 20)
+fname <- file.path(root_dir, "occurrences", "species_qualified_sdm.csv")
+write.csv(nums, fname, row.names = FALSE)

@@ -428,3 +428,27 @@ var_remove_cor <- function(env,
     if (!is.null(tossed)) env = env[-which(names(env) %in% tossed)]
     names(env)
 }
+
+mod_eval <- function(score, pred, label){
+    # TSS
+    cm <- table(pred, label)
+    if (all(rownames(cm) == 'TRUE')) {
+        cm <- rbind('FALSE' = c(0, 0), cm)
+    } else if (all(rownames(cm) == 'FALSE')) {
+        cm <- rbind(cm, 'TRUE' = c(0, 0))}
+    
+    # Traditional ones: sensitivity (TPR), specificity (TNR), and TSS
+    # TPR  = TP / (TP + FN)
+    # TNR = TN / (TN + FP)
+    tn <- cm[1]; fn <- cm[3]; tp <- cm[4]; fp <- cm[2]
+    tpr <- cm[4] / sum(cm[4], cm[3])
+    tnr <- cm[1] / sum(cm[1], cm[2])
+    tss <- tpr + tnr - 1
+    
+    aucs <- evalmod(scores = score, labels = label)
+    aucs <- auc(aucs)
+    
+    data.frame(tn = tn, fn = fn, tp = tp, fp = fp,
+               tpr = tpr, tnr = tnr, tss = tss,
+               auc = aucs$aucs[1], prc = aucs$aucs[2])
+}

@@ -3,6 +3,8 @@ title: "Prepare occurrences, range maps and environmental variables"
 author: "Lei Song"
 date: "2024-09-17"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -230,11 +232,44 @@ chunk_length <- 100
 species_list <- split(
     species, ceiling(seq_along(species) / chunk_length))
 
-for (i in 1:2){
+for (i in 1:length(species_list)){
     sp <- species_list[[i]]
     sp <- paste(sp, collapse = ",")
     system(sprintf("sbatch schedulers/env_sampling.sh %s", sp))
 }
+
+# When all species are done, run this:
+fnames <- list.files(file.path(root_dir, "occurrences", "CSVs_thin"), 
+                     full.names = TRUE)
+## Get the numbers
+nums <- lapply(fnames, function(fname){
+    occ <- read.csv(fname)
+    bg <- read.csv(gsub("CSVs_thin", "bg", fname))
+    data.frame(species = gsub(".csv", "", basename(fname)),
+               num_occ = nrow(occ),
+               num_bg = nrow(bg))
+}) %>% bind_rows()
+
+## Only keep the species with >=20 occurrences
+nums <- nums %>% filter(num_occ >= 20)
+fname <- file.path(root_dir, "occurrences", "species_qualified_sdm.csv")
+write.csv(nums, fname, row.names = FALSE)
 ```
 
 After completing these steps, the occurrence and background samples are ready for modeling. We are confident that the occurrences and environmental variables have been thoroughly examined and properly processed. Check `species_distribution_modeling.Rmd` for the details of modeling.
+
+## Check the data
+
+```{r}
+library(ggplot2)
+
+ggplot(nums, aes(x = log(num_occ), y = num_bg / 10000)) + 
+  geom_point() +
+    xlab("log(No. of occurrences)") +
+    ylab("No. of background samples (10^4)") +
+    geom_smooth(se = FALSE, color = "red") +
+    theme_alluvial() +
+    theme(axis.text = element_text(size = 12, color = "black"),
+          axis.title = element_text(size = 14, color = "black"))
+```
+
