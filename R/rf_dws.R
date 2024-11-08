@@ -67,31 +67,56 @@ rf_dws <- function(sp,
                      crs = 3857) %>% mutate(occ = 1),
         column = "occ", plot = FALSE, progress = FALSE)
     
-    scv <- cv_spatial(
-        x = st_as_sf(occ, coords = c("x", "y"), 
-                     crs = 3857) %>% mutate(occ = 1),
-        column = "occ",
-        k = 5,
-        size = sac$range,
-        selection = "random",
-        biomod2 = FALSE,
-        iteration = 200, seed = seed,
-        progress = FALSE, report = FALSE, plot = FALSE)
+    scv <- tryCatch({
+        cv_spatial(
+            x = st_as_sf(occ, coords = c("x", "y"), 
+                         crs = 3857) %>% mutate(occ = 1),
+            column = "occ",
+            # in case for super sparse distributed species
+            k = min(5, nrow(sac$plots$data)),
+            size = sac$range,
+            selection = "random",
+            biomod2 = FALSE,
+            iteration = 200, seed = seed,
+            progress = FALSE, report = FALSE, plot = FALSE) 
+    }, error = function(e){
+        cv_spatial(
+            x = st_as_sf(occ, coords = c("x", "y"), 
+                         crs = 3857) %>% mutate(occ = 1),
+            column = "occ",
+            # in case for super sparse distributed species
+            k = min(5, nrow(sac$plots$data)),
+            size = sac$range,
+            selection = "random",
+            biomod2 = FALSE, hexagon = FALSE, # For one super spread species
+            iteration = 200, seed = seed,
+            progress = FALSE, report = FALSE, plot = FALSE) 
+    })
     
     # Merge the folds
     occ <- occ %>% mutate(fold = scv$folds_ids)
     
     # Get pseudo absence, assuming the points outside of range are most likely
     # be true absence for a solid evaluation.
-    set.seed(seed)
-    bg_eval <- bg %>% st_as_sf(coords = c("x", "y"), crs = crs(vars)) %>% 
-        vect() %>% mask(., vect(range %>% st_buffer(50000)), 
-                        inverse = TRUE) %>% st_as_sf() %>% 
-        sample_n(size = nrow(occ), replace = TRUE) %>% 
-        st_coordinates() %>% as.data.frame() %>% 
-        mutate(sp = unique(occ$sp), id = 1:nrow(.), fold = occ$fold) %>% 
-        rename(x = X, y = Y) %>% 
-        select(id, sp, x, y, fold)
+    ## Notice: species living in relatively islands may failed to extract
+    ## any bg_eval using this method. If this is the case, randomly select
+    ## the required number of bg_eval.
+    bg_eval <- tryCatch({
+        set.seed(seed)
+        bg %>% st_as_sf(coords = c("x", "y"), crs = crs(vars)) %>% 
+            vect() %>% mask(., vect(range %>% st_buffer(50000)), 
+                            inverse = TRUE) %>% st_as_sf() %>% 
+            sample_n(size = nrow(occ), replace = TRUE) %>% 
+            st_coordinates() %>% as.data.frame() %>% 
+            mutate(sp = unique(occ$sp), id = 1:nrow(.), fold = occ$fold) %>% 
+            rename(x = X, y = Y) %>% 
+            select(id, sp, x, y, fold)
+    }, error = function(e){
+        set.seed(seed)
+        bg %>% sample_n(size = nrow(occ), replace = FALSE) %>% 
+            mutate(id = 1:nrow(.), fold = occ$fold) %>% 
+            select(id, sp, x, y, fold)
+    })
     
     # Save out
     write.csv(occ, file.path(sp_dir, sprintf("p_%s.csv", sp)), 

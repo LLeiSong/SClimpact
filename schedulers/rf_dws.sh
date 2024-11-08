@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH -c 4
 #SBATCH --mem 20G
+#SBATCH -p largemem
 #SBATCH -t 10:00:00
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=lsong@ucsb.edu
