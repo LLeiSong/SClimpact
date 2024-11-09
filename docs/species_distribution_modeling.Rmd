@@ -6,16 +6,47 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 ```
 
 ## Prior
 
 The system should be configured according to the instructions in `setup_hpc_environment.Rmd`, and the data has been processed as outlined in `prepare_data.Rmd`.
 
-## Important sections
-### Down-sampled Random Forest (RF)
+## Modeling
 
-### Cross validation
+We designed the workflow to run independently or as a batch process on an HPC system. Users can apply the model to a list of specific species by calling the `rf_dws` function:
 
-### Model assessment
+```{r}
+sp <- "Abrothrix_andinus"
+root_dir <- "/home/lsong/SCImpact"
+var_dir <- file.path(root_dir, "data/variables")
+occ_dir <- file.path(root_dir, "data/occurrences")
+range_dir <- file.path(root_dir, "data/IUCN/Expert_Maps")
+dst_dir <- file.path(root_dir, "results/sdm")
+
+rf_dws(sp, occ_dir, var_dir, range_dir, dst_dir)
+```
+
+We also ran this step on HPC to save time (see details in `tools/slurm_submit_rf.R`):
+
+```{r}
+library(dplyr)
+root_dir <- "/home/lsong/SCImpact"
+species_list <- read.csv(
+    file.path(root_dir, "data/occurrences", "species_qualified_sdm.csv")) %>% 
+    arrange(num_occ)
+species_list <- species_list$species
+
+message(sprintf("%s species to process.", length(species_list)))
+
+chunk_length <- 40
+species_list <- split(
+    species_list, ceiling(seq_along(species_list) / chunk_length))
+
+for (i in 1:length(species_list)){
+    sp <- species_list[[i]]
+    sp <- paste(sp, collapse = ",")
+    system(sprintf("sbatch schedulers/rf_dws.sh %s", sp))
+}
+```

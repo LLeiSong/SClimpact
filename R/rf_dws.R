@@ -210,6 +210,7 @@ rf_dws <- function(sp,
     fnames <- list.files(file.path(var_dir, "OtherEnv"), full.names = TRUE)
     preds_future <- do.call(c, lapply(fnames, function(fname){
         lyr <- rast(fname) %>% crop(., msk) %>% mask(., msk)
+        lyr <- subset(lyr, var_list)
         predict(lyr, mod, type = "prob", index = 2)
     }))
     names(preds_future) <- gsub(".tif", "", basename(fnames))

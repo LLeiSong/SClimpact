@@ -205,13 +205,16 @@ for (i in 1:length(species_list)){
 Several studies have demonstrated that subsampling occurrences across environmental space can improve modeling accuracy and stability. Therefore, we included this step in our workflow as well. For background samples, we first extracted a large number (60000) of [**target-group-background (TGB)**](https://rvalavi.github.io/SDMwithRFs/), then environmentally thinned them.
 
 ```{r}
-src_dir <- "data/occurrences/CSVs"
-var_dir <- "data/variables"
-range_dir <- "data/IUCN/Expert_Maps"
-region_dir <- "data/terr-ecoregions-TNC"
-occ_dir <- "data/occurrences/CSVs_thin"
-bg_dir <- "data/occurrences/bg"
-env_sampling(src_dir, var_dir, range_dir, region_dir, occ_dir, bg_dir)
+root_dir <- "/home/lsong/SCImpact"
+src_dir <- file.path(root_dir, "data/occurrences/CSVs")
+var_dir <- file.path(root_dir, "data/variables")
+range_dir <- file.path(root_dir, "data/IUCN/Expert_Maps")
+region_dir <- file.path(root_dir, "data/terr-ecoregions-TNC")
+occ_dir <- file.path(root_dir, "data/occurrences/CSVs_thin")
+bg_dir <- file.path(root_dir, "data/occurrences/bg")
+
+env_sampling(sp_list, src_dir, var_dir, range_dir, 
+             region_dir, occ_dir, bg_dir, 60000, 123, 30)
 ```
 
 We also ran this step on HPC to save time (see details in `tools/slurm_submit_es.R`):
