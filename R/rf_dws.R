@@ -128,11 +128,11 @@ rf_dws <- function(sp,
     
     ########### Extract environmental values ###########
     occ <- extract(vars, occ %>% select(x, y), ID = FALSE) %>% 
-        cbind(occ %>% select(fold)) %>% mutate(occ = 1)
+        cbind(occ %>% select(fold)) %>% mutate(occ = 1) %>% na.omit()
     bg <- extract(vars, bg %>% select(x, y), ID = FALSE) %>% 
-        mutate(occ = 0)
+        mutate(occ = 0) %>% na.omit()
     bg_eval <- extract(vars, bg_eval %>% select(x, y), ID = FALSE) %>% 
-        cbind(bg_eval %>% select(fold)) %>% mutate(occ = 0)
+        cbind(bg_eval %>% select(fold)) %>% mutate(occ = 0) %>% na.omit()
     
     ########### SDM ###########
     # Cross validation

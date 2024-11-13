@@ -7,7 +7,7 @@
 #' @param var_dir (`character`) The directory for environmental variables.
 #' @param range_dir (`character`) The directory for IUCN ranges.
 #' @param max_nshap (`integer`) The maximum nsim of Monte Carlo simulation
-#' for `fastshap` to calculate Shapley values. 
+#' for `fastshap` to calculate Shapely values. 
 #' @param seed (`integer`) The seed for randomization. 
 #' @return All results are saved to `work_dir` under the folder with same name
 #' as sp.
@@ -127,30 +127,10 @@ shap <- function(sp,
     msk <- range %>% st_buffer(90000)
     
     # Baseline
-    fn1 <- file.path(sp_dir, sprintf("shap_base_%s_%s.tif", sp, 10))
-    fn2 <- file.path(sp_dir, sprintf("shap_base_%s_%s.tif", sp, nshap))
-    if (!file.exists(fn1) | !file.exists(fn2)){
+    fn <- file.path(sp_dir, sprintf("shap_base_%s_%s.tif", sp, nshap))
+    if (!file.exists(fn)){
         vars <- mask(crop(vars, msk), msk)
         new_data <- values(vars) %>% na.omit() %>% data.frame()
-        
-        # With 10 nsim as the baseline
-        registerDoParallel(cores = min(ncores, ncol(new_data)))
-        set.seed(seed)
-        
-        shap_explain <- fastshap::explain(
-            mod, X = training,
-            newdata = new_data,
-            nsim = 10,
-            adjust = TRUE, parallel = TRUE,
-            pred_wrapper = pfun)
-        
-        stopImplicitCluster()
-        
-        shap_base <- vars
-        vals <- values(shap_base)
-        vals[complete.cases(vals), ] <- shap_explain
-        values(shap_base) <- vals
-        writeRaster(shap_base, fn1, overwrite = TRUE)
         
         # The real calculation
         registerDoParallel(cores = min(ncores, ncol(new_data)))
@@ -169,39 +149,19 @@ shap <- function(sp,
         vals <- values(shap_base)
         vals[complete.cases(vals), ] <- shap_explain
         values(shap_base) <- vals
-        writeRaster(shap_base, fn2, overwrite = TRUE)
+        writeRaster(shap_base, fn, overwrite = TRUE)
     }
     
     # Scenarios
     fnames <- list.files(file.path(var_dir, "OtherEnv"), full.names = TRUE)
     for (fname in fnames){
         scenario <- gsub(".tif", "", basename(fname))
-        fn1 <- file.path(sp_dir, sprintf("shap_%s_%s_%s.tif", scenario, sp, 10))
-        fn2 <- file.path(sp_dir, sprintf("shap_%s_%s_%s.tif", scenario, sp, nshap))
+        fn <- file.path(sp_dir, sprintf("shap_%s_%s_%s.tif", scenario, sp, nshap))
         
-        if (!file.exists(fn1) | !file.exists(fn2)){
+        if (!file.exists(fn)){
             vars <- rast(fname) %>% crop(., msk) %>% mask(., msk)
             vars <- subset(vars, var_list)
             new_data <- values(vars) %>% na.omit() %>% data.frame()
-            
-            # With 10 nsim as the baseline
-            registerDoParallel(cores = min(ncores, ncol(new_data)))
-            set.seed(seed)
-            
-            shap_explain <- fastshap::explain(
-                mod, X = training,
-                newdata = new_data,
-                nsim = 10,
-                adjust = TRUE, parallel = TRUE,
-                pred_wrapper = pfun)
-            
-            stopImplicitCluster()
-            
-            shap_scn <- vars
-            vals <- values(shap_scn)
-            vals[complete.cases(vals), ] <- shap_explain
-            values(shap_scn) <- vals
-            writeRaster(shap_scn, fn1, overwrite = TRUE)
             
             # The real calculation
             registerDoParallel(cores = min(ncores, ncol(new_data)))
@@ -220,7 +180,7 @@ shap <- function(sp,
             vals <- values(shap_scn)
             vals[complete.cases(vals), ] <- shap_explain
             values(shap_scn) <- vals
-            writeRaster(shap_scn, fn2, overwrite = TRUE)
+            writeRaster(shap_scn, fn, overwrite = TRUE)
         }
     }
 }
