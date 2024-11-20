@@ -127,7 +127,7 @@ env_sampling <- function(species = NULL,
                     st_as_sf(coords = c("lon", "lat"), crs = 4326) %>% 
                     st_transform(crs(vars))
             }) %>% bind_rows()
-            occs <- occs %>% st_intersection(regions_touch)
+            occs <- occs %>% st_intersection(regions_touch %>% st_union())
             
             tgb_kde <- suppressMessages(
                 spatialEco::sf.kde(

@@ -182,7 +182,7 @@ var_selection <- function(sp = "Puma_yagouaroundi",
     ## Rearrange variables based on the voting results
     vars_selected <- vars_voted %>% group_by(var) %>% 
         summarise(n = n()) %>% 
-        filter(n >= floor(iter * 0.5)) %>% 
+        filter(n >= floor(iter * 0.5)) %>% # 50% agree
         arrange(-n) %>% pull(var)
     
     if (length(vars_selected) == 0){
@@ -191,6 +191,9 @@ var_selection <- function(sp = "Puma_yagouaroundi",
             filter(n == max(n)) %>% 
             pull(var)
     }
+    
+    # Always consider bio1 and bio12
+    vars_selected <- unique(c(c("bio1", "bio12"), vars_selected))
     
     fname <- file.path(dst_dir, sprintf("%s.csv", sp))
     if (!file.exists(fname)){

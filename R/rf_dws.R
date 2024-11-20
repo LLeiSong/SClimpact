@@ -58,6 +58,14 @@ rf_dws <- function(sp,
         file.path(range_dir, sprintf("%s.geojson", sp)), 
         quiet = TRUE) %>% st_transform(crs(vars))
     
+    # Load dispersal rate and continents
+    dispersal_rate <- read.csv(
+        file.path(var_dir, "species_dispersal_rate.csv")) %>% 
+        filter(species == gsub("_", " ", sp)) %>% pull(dispersal_rate)
+    continents <- st_read(
+        file.path(var_dir, "continents.geojson"), quiet = TRUE) %>% 
+        slice(unique(unlist(st_intersects(range, .))))
+    
     ########### Split for cross validation ###########
     ## Use NbClust to automatically decide the optimal number of clusters
     ## Min is 5 and max is 15 to save time.
@@ -182,6 +190,8 @@ rf_dws <- function(sp,
     training$occ <- as.factor(training$occ)
     # calculate sub-samples
     prNum <- sum(training$occ == 1) # number of presence records
+    bgNum <- sum(training$occ == 0)
+    if (bgNum > prNum) prNum <- floor(prNum * 0.9)
     spsize <- c("0" = prNum, "1" = prNum) # sample size for both classes
     
     # RF with down-sampling
@@ -199,7 +209,9 @@ rf_dws <- function(sp,
     ########### Prediction ###########
     # Baseline
     # Crop the variables
-    msk <- range %>% st_buffer(90000) # 1km/yr until 2100
+    dispersal_distance <- dispersal_rate * (2100 - 2011 + 1) * 1000
+    msk <- range %>% st_buffer(dispersal_distance) %>% 
+        st_intersection(continents)
     vars <- mask(crop(vars, msk), msk)
     
     pred_current <- predict(vars, mod, type = "prob", index = 2)
@@ -207,7 +219,7 @@ rf_dws <- function(sp,
     writeRaster(pred_current, file.path(sp_dir, sprintf("pred_base_%s.tif", sp)))
     
     # Future
-    fnames <- list.files(file.path(var_dir, "OtherEnv"), full.names = TRUE)
+    fnames <- list.files(file.path(var_dir, "OtherEnvMean"), full.names = TRUE)
     preds_future <- do.call(c, lapply(fnames, function(fname){
         lyr <- rast(fname) %>% crop(., msk) %>% mask(., msk)
         lyr <- subset(lyr, var_list)

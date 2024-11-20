@@ -8,7 +8,7 @@ species_list <- species_list$species
 species_done <- lapply(species_list, function(sp){
     dr <- file.path(root_dir, "results/sdm", sp)
     if (dir.exists(dr)){
-        if (length(list.files(dr)) == 100){
+        if (length(list.files(dr)) == 54){
             sp
         } else NULL
     } else NULL

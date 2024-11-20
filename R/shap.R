@@ -59,13 +59,26 @@ shap <- function(sp,
     } else var_list <- na.omit(var_list$var_uncorrelated)
     vars <- subset(vars, var_list)
     
+    # Load range polygon
+    range <- st_read(
+        file.path(range_dir, sprintf("%s.geojson", sp)), 
+        quiet = TRUE) %>% st_transform(crs(vars))
+    
+    # Load dispersal rate and continents
+    dispersal_rate <- read.csv(
+        file.path(var_dir, "species_dispersal_rate.csv")) %>% 
+        filter(species == gsub("_", " ", sp)) %>% pull(dispersal_rate)
+    continents <- st_read(
+        file.path(var_dir, "continents.geojson"), quiet = TRUE) %>% 
+        slice(unique(unlist(st_intersects(range, .))))
+    
     # Reconstruct training
     occ <- extract(vars, occ %>% select(x, y), ID = FALSE) %>% 
-        cbind(occ %>% select(fold)) %>% mutate(occ = 1)
+        cbind(occ %>% select(fold)) %>% mutate(occ = 1) %>% na.omit()
     bg <- extract(vars, bg %>% select(x, y), ID = FALSE) %>% 
-        mutate(occ = 0)
+        mutate(occ = 0) %>% na.omit()
     bg_eval <- extract(vars, bg_eval %>% select(x, y), ID = FALSE) %>% 
-        mutate(occ = 0)
+        mutate(occ = 0) %>% na.omit()
     training <- occ %>% select(-fold) %>% rbind(bg) %>% 
         select(-occ)
     testing <- occ %>% select(-fold) %>% rbind(bg_eval) %>% 
@@ -82,7 +95,12 @@ shap <- function(sp,
         predict(X.model, newdata, type = "prob")[, 2]}
     
     # 2. Diagnose the enough max_nshap
+    ## Make a reasonable list of nsim to test
     nshap_list <- 10^(1:(nchar(as.integer(max_nshap)) - 1))
+    if (any(nshap_list > 1000) & max(nshap_list) > 1000){
+        nshap_list <- c(nshap_list, seq(1000, max(nshap_list), 3000)) %>% 
+            unique() %>% sort()
+    }
     shap_list <- lapply(nshap_list, function(nsim){
         registerDoParallel(cores = min(ncores, ncol(testing)))
         set.seed(seed)
@@ -118,13 +136,10 @@ shap <- function(sp,
         filter(gain < 0.001) %>% slice(1) %>% pull(nshap)
     
     # Now start to calculate the shapely values
-    # Load range polygon
-    range <- st_read(
-        file.path(range_dir, sprintf("%s.geojson", sp)), 
-        quiet = TRUE) %>% st_transform(crs(vars))
-    
-    # Mask out, 1km/yr until 2100
-    msk <- range %>% st_buffer(90000)
+    # Mask out
+    dispersal_distance <- dispersal_rate * (2100 - 2011 + 1) * 1000
+    msk <- range %>% st_buffer(dispersal_distance) %>% 
+        st_intersection(continents)
     
     # Baseline
     fn <- file.path(sp_dir, sprintf("shap_base_%s_%s.tif", sp, nshap))
@@ -153,7 +168,7 @@ shap <- function(sp,
     }
     
     # Scenarios
-    fnames <- list.files(file.path(var_dir, "OtherEnv"), full.names = TRUE)
+    fnames <- list.files(file.path(var_dir, "OtherEnvMean"), full.names = TRUE)
     for (fname in fnames){
         scenario <- gsub(".tif", "", basename(fname))
         fn <- file.path(sp_dir, sprintf("shap_%s_%s_%s.tif", scenario, sp, nshap))

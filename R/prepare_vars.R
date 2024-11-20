@@ -22,10 +22,10 @@ prepare_vars <- function(clim_dir,
                          lc_dir,
                          dst_dir,
                          verbose = TRUE){
-    orig_setting <- terraOptions()
-    terraOptions(memfrac = 0.8, tempdir = "data/temp")
     if (!dir.exists("data/temp")){
         dir.create("data/temp")}
+    orig_setting <- terraOptions()
+    terraOptions(memfrac = 0.8, tempdir = "data/temp")
     
     # clim_dir <- '/Volumes/gazelle/CHELSA_V2/GLOBAL/climatologies'
     # lc_dir <- "/Volumes/gazelle/future_land_projection_chen/Global\
@@ -75,8 +75,8 @@ prepare_vars <- function(clim_dir,
                 sprintf("CHELSA_%s_%s_V.2.1.tif", vars, yr))
             clim <- rast(file.path(data_dir))
             names(clim) <- vars
-            clim <- project(clim, template, 
-                            method = "bilinear", threads = TRUE)
+            clim <- project(clim, template, method = "bilinear", 
+                            threads = TRUE, use_gdal = FALSE, by_util = FALSE)
             
             # Land cover
             lc <- rast(file.path(lc_dir, "global_LULC_2015.tif"))
@@ -127,8 +127,13 @@ prepare_vars <- function(clim_dir,
                                 vars, yr, tolower(mod), ssp))
                     clim <- rast(file.path(data_dir))
                     names(clim) <- vars
-                    clim <- project(clim, template, 
-                                    method = "bilinear", threads = TRUE)
+                    clim <- project(clim, template, method = "bilinear", 
+                                    threads = TRUE, use_gdal = FALSE, 
+                                    by_util = FALSE)
+                    
+                    # Process bio14
+                    bio17 <- mask(clim$bio17, clim$bio14, inverse = TRUE)
+                    clim$bio14 <- merge(clim$bio14, bio17)
                     
                     # Land cover
                     yr_lc <- strsplit(yr, "-")[[1]][2]
@@ -180,4 +185,33 @@ prepare_vars <- function(clim_dir,
     # Turn the options back
     unlink("data/temp", recursive = TRUE)
     terraOptions(memfrac = orig_setting$memfrac, tempdir = orig_setting$tempdir)
+}
+
+# To calculate the mean across models
+mod_mean <- function(work_dir){
+    fnames <- list.files(file.path(work_dir, "OtherEnv"), full.names = TRUE)
+    ssps <- sprintf("ssp%s", c(126, 370, 585))
+    years <- c("2011-2040", "2041-2070", "2071-2100")
+    vars <- c(sprintf("bio%s", 1:19), c("forest", "grassland", "human_impact"))
+    
+    otherenv_dir <- file.path(work_dir, "OtherEnvMean")
+    if (!dir.exists(otherenv_dir)) dir.create(otherenv_dir)
+    
+    for (yr in years){
+        for (ssp in ssps){
+            fns <- fnames[grep(ssp, fnames)]
+            fns <- fns[grep(yr, fns)]
+            clim <- do.call(c, lapply(vars, function(vr){
+                do.call(c, lapply(fns, function(fn){
+                    rast(fn, lyrs = vr)
+                })) %>% mean(na.rm = TRUE)
+            }))
+            names(clim) <- vars
+            
+            # Save out
+            fname <- file.path(otherenv_dir, 
+                sprintf("%s_%s.tif", ssp, yr))
+            writeRaster(clim, fname)
+        }
+    }
 }

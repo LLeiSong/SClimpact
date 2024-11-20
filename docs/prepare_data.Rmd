@@ -153,6 +153,12 @@ dst_dir <- "data/variables"
 prepare_vars(clim_dir, lc_dir, dst_dir, FALSE)
 ```
 
+To both decrease the uncertainties in climate prediction and save computational resources, we calculated the mean across 5 different climate models.
+
+```{r}
+mod_mean(dst_dir)
+```
+
 ## Environmental variable selection
 
 To enhance model reliability, it is recommended to diagnose variables for each species individually. We incorporated this step into our workflow using Bayesian Additive Regression Trees (BARTs). We randomly selected an equal number of pseudo-absence points to pair with presence points and applied BART to iteratively reduce the variables. This process was repeated for 30 iterations, and the most frequently used variables were selected. Highly correlated variables (correlation coefficient > 0.7) were subsequently removed. The script can be executed both locally or remotely on servers as follows:
