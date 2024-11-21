@@ -158,6 +158,8 @@ rf_dws <- function(sp,
         
         # calculate sub-samples
         prNum <- sum(training$occ == 1) # number of presence records
+        bgNum <- sum(training$occ == 0)
+        if (bgNum < prNum) prNum <- floor(prNum * 0.9)
         spsize <- c("0" = prNum, "1" = prNum) # sample size for both classes
         
         # RF with down-sampling
@@ -191,7 +193,7 @@ rf_dws <- function(sp,
     # calculate sub-samples
     prNum <- sum(training$occ == 1) # number of presence records
     bgNum <- sum(training$occ == 0)
-    if (bgNum > prNum) prNum <- floor(prNum * 0.9)
+    if (bgNum < prNum) prNum <- floor(prNum * 0.9)
     spsize <- c("0" = prNum, "1" = prNum) # sample size for both classes
     
     # RF with down-sampling

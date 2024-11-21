@@ -102,8 +102,9 @@ shap <- function(sp,
             unique() %>% sort()
     }
     shap_list <- lapply(nshap_list, function(nsim){
-        registerDoParallel(cores = min(ncores, ncol(testing)))
+        RNGkind("L'Ecuyer-CMRG")
         set.seed(seed)
+        registerDoParallel(cores = min(ncores, ncol(testing)))
         
         shap_explain <- fastshap::explain(
             mod,
@@ -148,8 +149,9 @@ shap <- function(sp,
         new_data <- values(vars) %>% na.omit() %>% data.frame()
         
         # The real calculation
-        registerDoParallel(cores = min(ncores, ncol(new_data)))
+        RNGkind("L'Ecuyer-CMRG")
         set.seed(seed)
+        registerDoParallel(cores = min(ncores, ncol(new_data)))
         
         shap_explain <- fastshap::explain(
             mod, X = training,
@@ -179,8 +181,9 @@ shap <- function(sp,
             new_data <- values(vars) %>% na.omit() %>% data.frame()
             
             # The real calculation
-            registerDoParallel(cores = min(ncores, ncol(new_data)))
+            RNGkind("L'Ecuyer-CMRG")
             set.seed(seed)
+            registerDoParallel(cores = min(ncores, ncol(new_data)))
             
             shap_explain <- fastshap::explain(
                 mod, X = training,
