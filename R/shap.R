@@ -139,7 +139,7 @@ shap <- function(sp,
     # Mask out
     dispersal_distance <- dispersal_rate * (2100 - 2011 + 1) * 1000
     msk <- range %>% st_buffer(dispersal_distance) %>% 
-        st_intersection(continents)
+        st_intersection(continents) %>% st_union() %>% st_as_sf()
     
     # Baseline
     fn <- file.path(sp_dir, sprintf("shap_base_%s_%s.tif", sp, nshap))

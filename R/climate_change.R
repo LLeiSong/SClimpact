@@ -7,104 +7,111 @@ library(ggsci)
 library(ggpubr)
 library(rnaturalearth)
 library(tidyterra)
+library(forcats)
 sf_use_s2(FALSE)
 
 # Get model evaluation
+root_dir <- here()
 dst_dir <- "results/sdm"
 
-evals <- list.files(dst_dir, full.names = TRUE, pattern = "evaluation_")
-evals <- do.call(rbind, lapply(evals, function(fname){
-    numbers <- read.csv(fname) %>% 
-        mutate(species = str_extract(full.name, "[a-z|A-Z]+.[a-z|A-Z]+")) %>% 
-        mutate(species = gsub("\\.", " ", species)) %>% 
-        filter(PA != "allData" & run != "allRun") %>% 
-        group_by(species, metric.eval) %>% 
-        dplyr::summarise(worst = min(validation),
-                         best = max(validation),
-                         validation = mean(validation))
-    
-    if (numbers[3, 5] > 0.4){
-        if (numbers[2, 5] > 0.7){
-            numbers
-        }
-    }
-}))
+species_list <- read.csv(
+    file.path(here(), "data/occurrences", "species_qualified_sdm.csv")) %>% 
+    arrange(num_occ)
+species_list <- species_list$species
 
-# 110 species left, these models can well explain the species distribution
+evals <- lapply(species_list, function(sp){
+    dr <- file.path(root_dir, "results/sdm", sp)
+    eval <- read.csv(file.path(dr, sprintf("cv_eval_%s.csv", sp)))
+    eval <- eval %>% 
+        mutate(accuracy = (tp + tn) / (tp + tn + fp + fn))
+    eval <- eval %>% select(-fold) %>% group_by(type) %>% 
+        summarise_all("mean") %>% 
+        mutate(species = sp)
+    if (all(eval$auc >= 0.7)){
+        eval
+    } else NULL
+}) %>% bind_rows()
+
+# 1992 species left, these models can well explain the species distribution
 # Visualize the results
 evals <- evals %>% 
-    mutate(metric.eval = factor(metric.eval,
-                                levels = c("ACCURACY", "ROC", "TSS"),
-                                labels = c("Accuracy", "AUC", "TSS")))
-ggplot(data = evals, 
-       aes(x = validation, after_stat(density), fill = metric.eval)) +
+    select(type, tss, auc, accuracy, species) %>% 
+    pivot_longer(2:4, names_to = "metric.eval", values_to = "value")
+evals <- evals %>% 
+    mutate(metric.eval = factor(
+        metric.eval,
+        levels = c("accuracy", "auc", "tss"),
+        labels = c("Accuracy", "AUC", "TSS")))
+ggplot(data = evals %>% filter(type == "testing"), 
+       aes(x = value, after_stat(density), fill = metric.eval)) +
     geom_density(alpha = 0.30) +
     xlab("Metric value(0 - 1)") +
     ylab("Density") +
     scale_fill_aaas(name = "Metric") +
     theme_pubclean(base_size = 14)
 
-ggsave("figures/model_eval.png",
+ggsave("docs/figures/model_eval.png",
        width = 4.5, height = 4.5, dpi = 500)
 
 # Subset the species
 species_list <- unique(evals$species)
 
-# No. of associated species
-template <- rast(file.path("data/env", "chelsa_1981-2010.tif"), lyrs = 1)
-template <- aggregate(template, 6)
-values(template) <- 0
-
-fnames <- list.files(dst_dir, full.names = TRUE, pattern = "current_suit") %>% 
-    data.frame(fname = .) %>% 
-    mutate(species = gsub("current_suit_", "", basename(fname))) %>% 
-    mutate(species = gsub(".tif", "", species)) %>% 
-    mutate(species = gsub("_", " ", species)) %>% 
-    filter(species %in% species_list)
-
-for (fname in fnames$fname){
-    lyr <- rast(fname)
-    lyr <- !is.na(lyr)
-    template <- terra::extend(lyr, template, fill = 0) + template
+# Variables
+vars <- data.frame(
+    var = names(rast(file.path("data/variables/Env", "AllEnv.tif"))),
+    num = 0)
+for (sp in species_list) {
+    dr <- file.path(root_dir, "data/variables/variable_list")
+    vars_sl <- read.csv(file.path(dr, sprintf("%s.csv", sp)))
+    vars_sl <- na.omit(vars_sl$var_uncorrelated)
+    vars[vars$var %in% vars_sl, 'num'] <- 
+        vars[vars$var %in% vars_sl, 'num'] + 1
 }
 
-bry <- rnaturalearth::ne_countries(type = "countries")
-template <- template %>% crop(bry) %>% mask(bry)
-template[template == 0] <- NA
-# template <- terra::trim(template)
+vars <- vars %>% arrange(-num) %>% slice(1:10) %>% 
+    mutate(var = ifelse(var == "forest", "Forest coverage",
+                        ifelse(var == "human_impact", "Human impact",
+                               gsub("bio", "BIO", var)))) %>% 
+    mutate(var = fct_reorder(var, -num))
 
-ggplot() +
-    geom_spatraster(data = template) +
-    geom_sf(data = st_union(bry), color = "black", fill = "transparent") +
-    scale_fill_whitebox_c(
-        name = "No. of\nspecies",
-        palette = "muted",
-        n.breaks = 12,
-        guide = guide_legend(reverse = TRUE))+
-    theme_void(base_size = 14)
+ggplot(data = vars, 
+       aes(x = var, num)) +
+    geom_col(fill = "black") +
+    xlab("Variable") +
+    ylab("No. of species") +
+    scale_fill_aaas(name = "Metric") +
+    theme_pubclean(base_size = 14) +
+    theme(axis.text.x = element_text(color = "black",
+                                     angle = 90, vjust = 0.5, hjust=1))
 
-ggsave("figures/no_species.png",
-       width = 8, height = 4, dpi = 500)
+ggsave("docs/figures/vars_selected.png",
+       width = 4.5, height = 5, dpi = 500)
 
 # Climate change analysis
-template <- rast(file.path("data/env", "chelsa_1981-2010.tif"), lyrs = 1)
-template <- aggregate(template, 6)
+template <- rast(file.path("data/variables/Env", "AllEnv.tif"), lyrs = 1)
 values(template) <- 0
 
-climate_change <- function(lyr_nm, template){
+climate_change <- function(lyr_nm, scenario, template){
     # Current
-    fnames <- list.files(dst_dir, full.names = TRUE,
-                         pattern = "current_shap") %>% 
-        data.frame(fname = .) %>% 
-        mutate(species = gsub("current_shap_", "", basename(fname))) %>% 
-        mutate(species = gsub(".tif", "", species)) %>% 
-        mutate(species = gsub("_", " ", species)) %>% 
-        filter(species %in% species_list) %>% pull(fname)
+    species_use <- lapply(species_list, function(sp){
+        var_list <- read.csv(
+            file.path("data/variables/variable_list",
+                      sprintf("%s.csv", sp))) %>% 
+            pull(var_uncorrelated) %>% na.omit()
+        if (lyr_nm %in% var_list){
+            sp
+        } else NULL
+    }) %>% unlist() %>% na.omit()
+    
+    fnames <- lapply(species_use, function(sp){
+        list.files(file.path(dst_dir, sp), pattern = "shap_base", 
+                   full.names = TRUE)
+    }) %>% unlist()
     
     ## Direction change
     dir_change <- do.call(c, lapply(fnames, function(fname){
         cur <- rast(fname) %>% subset(lyr_nm)
-        fut <- rast(gsub("current", "future", fname)) %>% subset(lyr_nm)
+        fut <- rast(gsub("base", scenario, fname)) %>% subset(lyr_nm)
         
         lyr <- ((cur >= 0) + 1) * ((fut >= 0) + 3)
         lyr %>% terra::extend(template, fill = NA)
@@ -125,7 +132,7 @@ climate_change <- function(lyr_nm, template){
     # Value change
     val_change <- lapply(fnames, function(fname){
         cur <- rast(fname) %>% subset(lyr_nm)
-        fut <- rast(gsub("current", "future", fname)) %>% subset(lyr_nm)
+        fut <- rast(gsub("base", scenario, fname)) %>% subset(lyr_nm)
         pos_msk <- cur >= 0
         pos_msk[pos_msk == 0] <- NA
         neg_msk <- cur < 0
@@ -151,7 +158,8 @@ climate_change <- function(lyr_nm, template){
     message("Finish value change detection.")
 }
 
-nms <- c("bio1", "bio12", "lc")
+nms <- c("bio1", "bio12", "forest")
+scenario <- "ssp370_2041-2070"
 for (nm in nms){
     message(nm)
     climate_change(nm, template)
@@ -212,15 +220,18 @@ ggsave("figures/change_direction.png",
        width = 7, height = 4.5, dpi = 500)
 
 # One by one
-lyr_nm <- "bio12"
+bry <- rnaturalearth::ne_countries(type = "countries")
+lyr_nm <- "bio1"
 dir_change <- rast(file.path(sprintf("results/dir_change_%s.tif", lyr_nm)))
 names(dir_change) <- c("A", "B", "C", "D")
+dir_change <- dir_change %>% project("EPSG:4326") %>% crop(bry) %>% mask(bry)
+
 val_change <- rast(file.path(sprintf("results/val_change_%s.tif", lyr_nm)))
 names(val_change) <- c("A", "B")
+val_change <- val_change %>% project("EPSG:4326") %>% crop(bry) %>% mask(bry)
+
 ggplot() +
-    geom_spatraster(data = dir_change) +
-    geom_sf(data = st_union(bry), color = "black", fill = "transparent") +
-    facet_wrap(~lyr, nrow = 2, strip.position = "left") +
+    geom_spatraster(data = subset(dir_change, "B")) +
     scale_fill_whitebox_c(
         name = "(% of species)",
         palette = "muted",
@@ -234,13 +245,11 @@ ggplot() +
           legend.margin = margin(rep(0.1, 4)), 
           plot.margin = unit(c(0, 0, 0, 0), "cm"))
 
-ggsave(sprintf("figures/%s_change_direction.png", lyr_nm),
-       width = 8, height = 3.5, dpi = 500)
+ggsave(sprintf("docs/figures/%s_change_direction_np.png", lyr_nm),
+       width = 6, height = 3.5, dpi = 500)
 
 ggplot() +
-    geom_spatraster(data = val_change) +
-    geom_sf(data = st_union(bry), color = "black", fill = "transparent") +
-    facet_wrap(~lyr, nrow = 2, strip.position = "left") +
+    geom_spatraster(data = subset(val_change, "B")) +
     scale_fill_whitebox_c(
         name = "Shapley value\nchange",
         palette = "muted",
@@ -254,5 +263,5 @@ ggplot() +
           legend.margin = margin(rep(0.1, 4)), 
           plot.margin = unit(c(0, 0, 0, 0), "cm"))
 
-ggsave(sprintf("figures/%s_change.png", lyr_nm),
-       width = 6, height = 4.5, dpi = 500)
+ggsave(sprintf("docs/figures/%s_change_un.png", lyr_nm),
+       width = 6, height = 3.5, dpi = 500)

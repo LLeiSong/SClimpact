@@ -16,6 +16,7 @@ library(ggplot2)
 library(ggsankey)
 library(dplyr)
 library(circlize)
+library(sf)
 ```
 
 ## Occurrences
@@ -250,14 +251,21 @@ for (i in 1:length(species_list)){
 # When all species are done, run this:
 fnames <- list.files(file.path(root_dir, "occurrences", "CSVs_thin"), 
                      full.names = TRUE)
+sf_use_s2(FALSE)
 ## Get the numbers
-nums <- lapply(fnames, function(fname){
+nums <- mclapply(fnames, function(fname){
     occ <- read.csv(fname)
     bg <- read.csv(gsub("CSVs_thin", "bg", fname))
+    range <- st_read(file.path(root_dir, "IUCN/Expert_Maps",
+                               gsub(".csv", ".geojson", basename(fname))),
+                     quiet = TRUE) %>% st_make_valid() %>% 
+        st_union() %>% st_make_valid() %>% 
+        st_area() %>% units::set_units("km2") %>% as.numeric()
     data.frame(species = gsub(".csv", "", basename(fname)),
                num_occ = nrow(occ),
-               num_bg = nrow(bg))
-}) %>% bind_rows()
+               num_bg = nrow(bg),
+               range = range)
+}, mc.cores = 10) %>% bind_rows()
 
 ## Only keep the species with >=20 occurrences
 nums <- nums %>% filter(num_occ >= 20)
