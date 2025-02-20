@@ -1,7 +1,7 @@
 #' @title var_selection
 #' @description Use Bayesian Additive Regression Trees (BARTs) to select the 
 #' most relevant variables.
-#' #' @param sp (`character`) The scientific name for the species.
+#' @param sp (`character`) The scientific name for the species.
 #' @param var_path (`character`) The path for the environmental variables.
 #' @param occ_dir (`character`) The directory for occurrences.
 #' @param aoh_dir (`character`) The directory for species AOH.
