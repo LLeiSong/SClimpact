@@ -75,6 +75,8 @@ climate_change <- function(feature,
     names(num_species) <- c("All", "P", "N")
     val_change <- c(rep(template, 2))
     names(val_change) <- c("P", "N")
+    val_change_perct <- c(rep(template, 2))
+    names(val_change_perct) <- c("P", "N")
     
     for (fname in fnames){
         # Load layers
@@ -127,6 +129,14 @@ climate_change <- function(feature,
         
         val_change <- sum(val_change, lyrs, na.rm = TRUE)
         
+        chg_perct <- (fut - cur) / cur * 100
+        lyrs <- c(mask(chg_perct, pos_msk), mask(chg_perct, neg_msk))
+        names(lyrs) <- c("P", "N")
+        
+        lyrs <- lyrs %>% terra::extend(template, fill = NA)
+        
+        val_change_perct <- sum(val_change_perct, lyrs, na.rm = TRUE)
+        
         # Count species
         cur <- cur %>% terra::extend(template, fill = NA)
         num_species[[2]] <- sum(num_species[[2]], cur >= 0, 
@@ -140,6 +150,7 @@ climate_change <- function(feature,
     names(dir_change) <- c("N to N", "N to P", "P to N", "P to P")
     names(num_species) <- c("All", "P", "N")
     names(val_change) <- c("P", "N")
+    names(val_change_perct) <- c("P", "N")
     
     # Save out
     fname <- file.path(
@@ -153,6 +164,10 @@ climate_change <- function(feature,
     fname <- file.path(
         dst_dir, sprintf("val_change_%s_%s.tif", feature, scenario))
     writeRaster(val_change, fname)
+    
+    fname <- file.path(
+        dst_dir, sprintf("val_change_percentage_%s_%s.tif", feature, scenario))
+    writeRaster(val_change_perct, fname)
     
     message(sprintf(
         "Finish %s for %s %s.", length(species_use), feature, scenario))

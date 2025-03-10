@@ -28,7 +28,7 @@ species_list <- split(
 catalog <- lapply(1:length(species_list), function(i){
     sp <- species_list[[i]]
     sp <- paste(sp, collapse = ",")
-    msg <- system(sprintf("sbatch schedulers/shap_sg.sh %s", sp), intern = TRUE)
+    msg <- system(sprintf("sbatch schedulers/shap.sh %s", sp), intern = TRUE)
     
     data.frame(species = sp, slurm = msg)
 }) %>% bind_rows()

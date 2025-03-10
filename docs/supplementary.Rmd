@@ -1,0 +1,496 @@
+---
+title: "Multifaceted effects of global change on future mammal distributions revealed by explainable modeling"
+description: |
+  Supplementary information
+author:
+  - name: Lei Song
+    url: https://github.com/LLeiSong
+    affiliation: University of California, Santa Barbara
+bibliography: references.bib
+bib-humanities: true
+output: 
+  distill::distill_article:
+    toc: true
+    toc_depth: '2'
+    theme: theme.css
+creative_commons: CC BY
+header-includes: 
+  \usepackage{caption}
+  \renewcommand{\figurename}{Fig.} 
+  \renewcommand{\thefigure}{S\arabic{figure}}
+  \renewcommand{\thetable}{S\arabic{table}}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+library(here)
+library(kableExtra)
+library(ggplot2)
+# devtools::install_github("davidsjoberg/ggsankey")
+library(ggsankey)
+library(dplyr)
+library(circlize)
+library(sf)
+```
+
+# Prior
+
+The system should be configured following the instructions in `setup_hpc_environment.Rmd`.
+
+# Prepare occurrences, range maps and environmental variables
+
+## Occurrences
+
+After considering various factors, we chose to use occurrence records from [GBIF](https://www.gbif.org) as the reference for species distribution modeling (SDM). However, given the known issues and limitations of these datasets, we implemented multiple data filtering steps to enhance the quality and reliability of the records. The details of these filtering steps are introduced in the following sections.
+
+### Data query
+
+Since our focus is exclusively on mammalian species, we specifically query occurrence records for mammals. The `query_gbif` function is used to efficiently retrieve large volumes of data from [GBIF](https://www.gbif.org).
+
+```{r query_gbif}
+source("R/query_gbif.R")
+
+# Query occurrences for all mammalian species from GBIF.
+occ_get <- query_gbif(taxon = "Mammals", occ_dir = here("data/occurrences"))
+```
+
+### Data filter
+
+```{r filter_gbif}
+source("R/query_aoh.R")
+source("R/filter_gbif.R")
+
+# Query AOH for mammals
+query_aoh(taxon = "Mammals", aoh_dir = here("data/IUCN_AOH_100m"))
+
+# Filter the queried occurrences.
+filter_gbif(x = occ_get, occ_dir = here("data/occurrences"),
+            aoh_dir = here("data/IUCN_AOH_100m/Mammals"))
+```
+
+#### Internal filtering during querying
+
+[GBIF API](https://techdocs.gbif.org/en/openapi/) now allows users to apply filters when querying data, enabling more refined searches and the exclusion of unwanted records. In our case, when using the `query_gbif` function, we applied several meta filters to remove records that are not relevant to our analysis. These filters include:
+
+1. Zero coordinate: Records with coordinates exactly at (0,0) (i.e., Null Island).
+2. Country-coordinate mismatch: Records where the coordinates fall outside the specified country's polygon.
+3. Invalid coordinates: Records where GBIF is unable to interpret the provided coordinates.
+4. Out-of-range coordinates: Records with latitude or longitude values outside the valid range ((-90,90), (-180,180)).
+5. Presence records only: Retaining only records marked as PRESENT.
+6. Exclusion of fossil and living specimens: Removing records classified as FOSSIL_SPECIMEN and LIVING_SPECIMEN.
+
+#### Extra filtering after querying
+
+The function `filter_gbif` applies additional filtering steps to refine the queried occurrence records, following best practices outlined in the GBIF data [blog1](https://data-blog.gbif.org/post/downloading-long-species-lists-on-gbif/) and [blog2](https://data-blog.gbif.org/post/gbif-filtering-guide/)). 
+
+These filters include:
+
+**Meta filter:**
+
+  1. Removing records older than 1900.
+  2. Excluding records with high spatial uncertainty (coordinatePrecision ≥ 0.01 and coordinateUncertaintyInMeters ≥ 10,000).
+  3. Removing possible GeoLocate centroids based on coordinateUncertaintyInMeters values (301, 3036, 999, 9999).
+  4. Filtering out points located along the prime meridian or equator (decimalLatitude = 0 or decimalLongitude = 0).
+  5. Removing possible country centroids (within 2 km), capital centroids (within 2 km), zoo/herbaria locations (within 2 km), and points in the ocean using the using package `CoordinateCleaner`.
+  6. Eliminating exact duplicate records to avoid redundancy.
+  
+**Spatial outlier filtering:**
+
+Retaining only occurrences that fall within the species's Area of Habitat [(AOH) maps](https://doi.org/10.1038/s41597-022-01838-w).
+
+**Environmental outlier filtering and spatial thinning:**
+
+This step is not applied in the `filter_gbif` function but is incorporated later in the modeling workflow, as it requires access to environmental layers.
+
+### Prepare CSVs and separate range maps
+
+One key challenge in this step is reconciling scientific names across different versions of the [Mammal Diversity Database (MDD)](https://zenodo.org/records/6407053). To address this, we cross-match scientific names between occurrence records and range maps. Following this, occurrences are separated into individual CSV files, while range maps are stored as GEOJSON files.
+
+```{r}
+source("R/prepare_range.R")
+
+# Set some paths and directories
+range_path <- here("data/IUCN/MAMMALS/MAMMALS.shp")
+occ_path <- here("data/occurrences/occurrences_clean_0018860-240906103802322.csv")
+sp_catalog_path <- here("data/occurrences/species_catalog_0018860-240906103802322.csv")
+occ_dir <- here("data/occurrences/CSVs")
+range_dir <- here("data/IUCN/Expert_Maps")
+
+# Call the function
+prepare_range(range_path, occ_path, sp_catalog_path, occ_dir, range_dir)
+```
+
+After this step, there are *2480* species left in the analysis.
+
+## Environmental layers
+
+### Data sources
+
+We used bioclimatic variables (BIO 1–19) from the periods 1981–2010, 2011–2040, 2041–2070, and 2071–2100, sourced from [CHELSA Bioclim](https://chelsa-climate.org/bioclim/). CHELSA provides climate projections across five models and three emission scenarios:
+
+**Models:**
+
+- GFDL-ESM4
+- UKESM1-0-LL
+- MPI-ESM1-2-HR
+- IPSL-CM6A-LR
+- MRI-ESM2-0
+
+**Scenarios:**
+
+- SSP 126
+- SSP 370
+- SSP 585
+
+We also used the projected future land use and land cover (LULC) dataset developed by [Chen et al. (2022)](https://www.nature.com/articles/s41597-022-01208-6), which provides LULC maps from 2015 to 2100 at 5-year intervals under various SSP-RCP scenarios.
+
+**Land classification:**
+
+- 1 - Water
+- 2 - Forest
+- 3 - Grassland
+- 4 - Barren
+- 5 - Cropland
+- 6 - Urban
+- 7 - Permanent snow and ice
+
+**Scenarios:**
+
+- SSP1_RCP19
+- SSP1_RCP26
+- SSP2_RCP45
+- SSP3_RCP70
+- SSP4_RCP34
+- SSP4_RCP60
+- SSP5_RCP34
+- SSP5_RCP85
+
+We selected SSP1_RCP26, SSP3_RCP70, and SSP5_RCP85 to align with the corresponding climate variable scenarios. To ensure consistency across time periods, we paired the year 2015 with 1981–2010 as the baseline condition, 2040 with 2011–2040, 2070 with 2041–2070, and 2100 with 2071–2100.
+
+### Data processing
+
+To emphasize global-scale patterns and improve computational efficiency, we perform the analysis at a 10 km resolution using the [Pseudo-Mercator projection (EPSG:3857)](https://epsg.io/3857). The global template is defined as follows:
+
+```{r template}
+template <- rast(xmin = -20037508.34, xmax = 20037508.34, 
+                 ymin = -20048966.1, ymax = 20048966.1,
+                 crs = "EPSG:3857", resolution = 10000)
+```
+
+The bioclimatic variables were calculated using the bilinear mean, while land cover was derived based on the coverage of associated land cover types. To simplify the analysis and minimize potential bias from rare land cover types, we aggregated several categories: Forest to represent forest coverage (noting that the original land cover map includes shrubs under forest), Grassland to represent low vegetation coverage, and Cropland and Urban to capture human impact.
+
+The environmental variables are prepared as follows:
+
+```{r query_env}
+source("R/prepare_vars.R")
+
+clim_dir <- '/Volumes/gazelle/CHELSA_V2/GLOBAL/climatologies'
+lc_dir <- file.path(
+    "/Volumes/gazelle/future_land_projection_chen/Global",
+    " 7-land-types\ LULC\ projection\ dataset\ under\ SSPs-RCPs")
+dst_dir <- "data/variables"
+prepare_vars(clim_dir, lc_dir, dst_dir, FALSE)
+```
+
+To reduce uncertainties in climate projections while optimizing computational efficiency, we calculated the mean across five different climate models.
+
+```{r}
+source("R/prepare_vars.R")
+mod_mean(dst_dir)
+```
+
+## Environmental variable selection
+
+To enhance model reliability, it is recommended to diagnose variables for each species individually. We incorporated this step into our workflow using Bayesian Additive Regression Trees (BARTs). An equal number of pseudo-absence points were randomly selected to pair with presence points, and BART was applied iteratively to reduce the number of variables. This process was repeated 30 times, and the most frequently used variables were retained. To further refine the selection, highly correlated variables (correlation coefficient > 0.7) were removed.
+
+The script for the `var_selection` function can be executed both locally or remotely on servers as follows:
+
+```{r}
+source("R/var_selection.R")
+
+library(pbmcapply)
+species_list <- list.files("data/occurrences/CSVs")
+species_list <- gsub(".csv", "", species_list)
+species_list <- gsub("_", " ", species_list)
+
+var_path <- "data/variables/Env/AllEnv.tif"
+occ_dir <- "data/occurrences"
+aoh_dir <- "data/IUCN_AOH_100m/Mammals"
+dst_dir <- "data/variables/variable_list"
+tmp_dir <- "data/tmp"
+
+pbmclapply(species_list, function(sp){
+    var_selection(sp, var_path, occ_dir, aoh_dir, dst_dir, tmp_dir, 123)
+}, mc.cores = 10)
+```
+
+We executed this step on the HPC system (see details in `schedulers/slurm_submit_vs.R`, `schedulers/select_variable.sh`, and `R/vs_warp.R`):
+
+```{r}
+# slurm submission
+root_dir <- "/home/lsong/SCImpact/data"
+species_list <- list.files(file.path(root_dir, "occurrences/CSVs"))
+species_list <- gsub(".csv", "", species_list)
+fnames <- list.files(file.path(root_dir, "variables/variable_list"))
+fnames_to_move <- list.files(file.path(root_dir, "variables/variable_list"),
+                             pattern = "allruns.csv")
+fnames <- setdiff(fnames, fnames_to_move)
+fnames <- gsub(".csv", "", fnames)
+species_list <- setdiff(species_list, fnames)
+
+chunk_length <- 8
+species_list <- split(
+    species_list, ceiling(seq_along(species_list) / chunk_length))
+
+for (i in 1:length(species_list)){
+    sp <- species_list[[i]]
+    sp <- paste(sp, collapse = ",")
+    print(sp)
+    system(sprintf("sbatch schedulers/select_variable.sh %s", sp))
+}
+```
+
+## Environmental subsampling occurrences and sampling background samples
+
+Several studies have shown that subsampling occurrences across environmental space can enhance modeling accuracy and stability. Therefore, we incorporated this step into our workflow. For background samples, we initially extracted a large set of target-group-background (TGB) points (60,000) following [**this approach**](https://rvalavi.github.io/SDMwithRFs/) and then applied environmental thinning to refine the selection. We developed the function `env_sampling` for this task, which can be executed both locally or remotely on servers.
+
+```{r}
+source("R/env_sampling.R")
+
+root_dir <- "/home/lsong/SCImpact"
+src_dir <- file.path(root_dir, "data/occurrences/CSVs")
+var_dir <- file.path(root_dir, "data/variables")
+range_dir <- file.path(root_dir, "data/IUCN/Expert_Maps")
+region_dir <- file.path(root_dir, "data/terr-ecoregions-TNC")
+occ_dir <- file.path(root_dir, "data/occurrences/CSVs_thin")
+bg_dir <- file.path(root_dir, "data/occurrences/bg")
+
+env_sampling(sp_list, src_dir, var_dir, range_dir, 
+             region_dir, occ_dir, bg_dir, 60000, 123, 30)
+```
+
+We also ran this step on HPC to save time (see details in `schedulers/slurm_submit_es.R`, `schedulers/env_sampling.sh`, and `R/es_warp.R`):
+
+```{r}
+# slurm submission
+root_dir <- "/home/lsong/SCImpact/data"
+
+species <- list.files(file.path(root_dir, "occurrences/CSVs"))
+species <- gsub(".csv", "", species)
+species2 <- list.files(file.path(root_dir, "variables", "variable_list"))
+species2 <- gsub(".csv", "", species2)
+species <- intersect(species, species2)
+
+message(sprintf("%s species to process.", length(species)))
+
+chunk_length <- 100
+species_list <- split(
+    species, ceiling(seq_along(species) / chunk_length))
+
+for (i in 1:length(species_list)){
+    sp <- species_list[[i]]
+    sp <- paste(sp, collapse = ",")
+    system(sprintf("sbatch schedulers/env_sampling.sh %s", sp))
+}
+```
+
+# Make catalog
+
+With these steps completed, the occurrence and background samples are prepared for modeling. We are confident that the occurrences and environmental variables have been thoroughly examined and properly processed. Then run the following script to make the catalog:
+
+```{r}
+# When all species are done, run this:
+fnames <- list.files(file.path(root_dir, "occurrences", "CSVs_thin"), 
+                     full.names = TRUE)
+sf_use_s2(FALSE)
+## Get the numbers
+nums <- mclapply(fnames, function(fname){
+    occ <- read.csv(fname)
+    bg <- read.csv(gsub("CSVs_thin", "bg", fname))
+    range <- st_read(file.path(root_dir, "IUCN/Expert_Maps",
+                               gsub(".csv", ".geojson", basename(fname))),
+                     quiet = TRUE) %>% st_make_valid() %>% 
+        st_union() %>% st_make_valid() %>% 
+        st_area() %>% units::set_units("km2") %>% as.numeric()
+    data.frame(species = gsub(".csv", "", basename(fname)),
+               num_occ = nrow(occ),
+               num_bg = nrow(bg),
+               range = range)
+}, mc.cores = 10) %>% bind_rows()
+
+## Only keep the species with >=20 occurrences
+nums <- nums %>% filter(num_occ >= 20)
+fname <- file.path(root_dir, "occurrences", "species_qualified_sdm.csv")
+write.csv(nums, fname, row.names = FALSE)
+```
+
+## Check the occurrences
+
+```{r}
+library(ggplot2)
+
+ggplot(nums, aes(x = log(num_occ), y = num_bg / 10000)) + 
+  geom_point() +
+    xlab("log(No. of occurrences)") +
+    ylab("No. of background samples (10^4)") +
+    geom_smooth(se = FALSE, color = "red") +
+    theme_alluvial() +
+    theme(axis.text = element_text(size = 12, color = "black"),
+          axis.title = element_text(size = 14, color = "black"))
+```
+
+# Species distribution modeling
+
+We designed the workflow to run either independently or as a batch process on an HPC system. Users can apply the model to a specific list of species by calling the `rf_dws` function:
+
+```{r}
+source("R/rf_dws.R")
+
+sp <- "Abrothrix_andinus"
+root_dir <- "/home/lsong/SCImpact"
+var_dir <- file.path(root_dir, "data/variables")
+occ_dir <- file.path(root_dir, "data/occurrences")
+range_dir <- file.path(root_dir, "data/IUCN/Expert_Maps")
+dst_dir <- file.path(root_dir, "results/sdm")
+
+rf_dws(sp, occ_dir, var_dir, range_dir, dst_dir)
+```
+
+We ran this step on HPC to save time (see details in `schedulers/slurm_submit_rf.R`, `schedulers/rf_dws.sh`, and `R/rf_warp.R`):
+
+```{r}
+library(dplyr)
+root_dir <- "/home/lsong/SCImpact"
+species_list <- read.csv(
+    file.path(root_dir, "data/occurrences", "species_qualified_sdm.csv")) %>% 
+    arrange(num_occ)
+species_list <- species_list$species
+
+message(sprintf("%s species to process.", length(species_list)))
+
+chunk_length <- 40
+species_list <- split(
+    species_list, ceiling(seq_along(species_list) / chunk_length))
+
+for (i in 1:length(species_list)){
+    sp <- species_list[[i]]
+    sp <- paste(sp, collapse = ",")
+    system(sprintf("sbatch schedulers/rf_dws.sh %s", sp))
+}
+```
+
+# Dispersal distance calculation
+
+In species distribution modeling, accurately estimating dispersal distance is crucial for projecting future range shifts and assessing species' adaptive capacity under environmental change. Dispersal distance defines the potential movement of a species over time, influencing habitat connectivity and colonization potential. By incorporating dispersal constraints, we can generate more ecologically realistic projections, avoiding overestimation of future suitable habitat. This step ensures that species distributions are not solely determined by environmental suitability but also by their intrinsic dispersal limitations, leading to more robust and biologically meaningful predictions. 
+
+We developed a standalone script, `R/species_dispersal.R`, to calculate the dispersal rate for each species. This calculation is based on data from the [species trait database](https://datadryad.org/stash/dataset/doi:10.5061/dryad.gd0m3) and the equations outlined in [Schloss et al. (2011)](https://www.pnas.org/doi/epdf/10.1073/pnas.1116791109).
+
+# SHAP values calculation
+
+Once all models were built and dispersal rates were calculated, we proceeded to compute SHAP values for all environmental variables across different time periods and climate scenarios. Similar to species distribution modeling, we designed this workflow to run either independently or as a batch process on an HPC system. Users can apply the function to a specific list of species by calling the `shap` function or `shap_large` for species with very large ranges.
+
+```{r}
+source("R/shap.R") # source("R/shap_large.R")
+
+sp <- "Akodon_albiventer"
+work_dir <- "results/sdm"
+var_dir <- "data/variables"
+range_dir <- "data/IUCN/Expert_Maps"
+
+shap(sp, work_dir, var_dir, range_dir)
+```
+
+We executed this step on the HPC to optimize computation time (see details in `schedulers/slurm_submit_shap.R`, `schedulers/shap.sh`, and `R/shap_warp.R`):
+
+```{r}
+library(dplyr)
+root_dir <- "/home/lsong/SCImpact"
+species_list <- read.csv(
+    file.path(root_dir, "data/occurrences", "species_qualified_sdm.csv")) %>%
+    arrange(num_occ)
+species_list <- species_list$species
+
+species_done <- lapply(species_list, function(sp){
+    dr <- file.path(root_dir, "results/sdm", sp)
+    if (dir.exists(dr)){
+        if (length(list.files(dr)) == 18){
+            sp
+        } else NULL
+    } else NULL
+})
+
+species_done <- species_done[!sapply(species_done, is.null)]
+species_done <- unlist(species_done)
+
+species_list <- setdiff(species_list, species_done)
+
+message(sprintf("%s species to process.", length(species_list)))
+
+chunk_length <- 44
+species_list <- split(
+    species_list, ceiling(seq_along(species_list) / chunk_length))
+
+catalog <- lapply(1:length(species_list), function(i){
+    sp <- species_list[[i]]
+    sp <- paste(sp, collapse = ",")
+    msg <- system(sprintf("sbatch schedulers/shap.sh %s", sp), intern = TRUE)
+    
+    data.frame(species = sp, slurm = msg)
+}) %>% bind_rows()
+
+write.csv(catalog, file.path(root_dir, "shap_slurm.csv"), row.names = FALSE)
+```
+
+# Climate change analysis
+
+Using the calculated SHAP layers for all environmental drivers, we summarized the directional changes and magnitude variations in SHAP values to assess the impact of future environmental changes.
+
+```{r}
+source("R/climate_change.R")
+
+feature <- "bio1"
+scenario <- "ssp370_2041-2070"
+species_list <- c("Mustela_erminea", "Mustela_nivalis")
+root_dir <- "/home/lsong/SCImpact"
+sdm_dir <- "/bigscratch/lsong/results/sdm"
+dst_dir <- "/bigscratch/lsong/climate change"
+
+template <- rast(
+    file.path(root_dir,"data/variables/Env", "AllEnv.tif"), lyrs = 1)
+values(template) <- NA
+
+climate_change(feature, scenario, species_list, 
+               template, root_dir, sdm_dir, dst_dir)
+```
+
+We also executed this step on the HPC (see details in `schedulers/slurm_submit_cc.R`, `schedulers/climate_change.sh`, and `R/cc_warp.R`):
+
+```{r}
+library(dplyr)
+root_dir <- "/home/lsong/SCImpact"
+species_list <- read.csv("/bigscratch/lsong/species_qualified_sdm.csv")
+species_list <- species_list$species
+
+var_list <- lapply(species_list, function(sp){
+    var_list <- read.csv(
+        file.path(root_dir, "data/variables/variable_list",
+                  sprintf("%s.csv", sp))) %>% 
+        pull(var_uncorrelated) %>% na.omit()
+}) %>% unlist()
+
+var_list <- table(var_list) / length(species_list) * 100
+var_list <- sort(var_list[var_list > 10], decreasing = TRUE)
+features <- names(var_list)
+
+catalog <- lapply(features, function(feature){
+    msg <- system(
+        sprintf("sbatch schedulers/climate_change.sh %s", feature), 
+        intern = TRUE)
+    
+    data.frame(feature = feature, slurm = msg)
+}) %>% bind_rows()
+
+write.csv(catalog, file.path(root_dir, "climate_change_slurm.csv"), row.names = FALSE)
+```
