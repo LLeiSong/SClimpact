@@ -1,15 +1,12 @@
-#' @title query_gbif.
-#' @description Interactive function to download the raw occurrences 
-#' for all species from GBIF website. Use a faster and more elegant way to
-#' request with function `occ_download` in `rgbif`. And more importantly, can
-#' ensure a specific citation for the data.
-#' #' @param taxon (`character`) The taxon to process. Must be either Mammals or 
-#' Birds.
-#' @param occ_dir (`character`) The destination directory to save out the 
-#' queried occurrences.
-#' @return (`occ_download_get`) The \link{occ_download_get} object from `rgbif` 
-#' or `NULL` if the request fails. The `occ_download_get` can directly be passed
-#' to function \link{occ_download_import} for further processing.
+#' @title prepare_range.
+#' @description Prepare the IUCN range for species.
+#' @param range_path (`character`) The path of the IUCN range file.
+#' @param occ_path (`character`) The path of cleaned occurrences.
+#' @param sp_catalog_path (`character`) The path of species names catalog to save.
+#' @param occ_dir (`character`) The directory to save out occurrences.
+#' @param range_dir (`character`) The directory to save out the ranges.
+#' @return No return value. A file of occurrences and range for each species
+#' are save out to defined folders.
 #' 
 #' @details
 #' Make sure setting IUCN Redlist API token correctly before any use. See

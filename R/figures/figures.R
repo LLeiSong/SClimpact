@@ -22,7 +22,7 @@ mask <- terra::mask
 
 #### Model evaluation ####
 root_dir <- here()
-dst_dir <- "results/sdm"
+sdm_dir <- "results/sdm"
 
 species_list <- read.csv(
     file.path(here(), "data/occurrences", "species_qualified_sdm.csv")) %>% 
@@ -61,10 +61,10 @@ ggplot(data = evals %>% filter(type == "testing"),
     xlab("Metric value(0 - 1)") +
     ylab("Density") +
     scale_fill_brewer(name = "Metric", palette = "Dark2") +
-    theme_pubclean(base_size = 12, base_family = "Merriweather") +
+    theme_pubclean(base_size = 11, base_family = "Merriweather") +
     theme(axis.text = element_text(color = "black", family = 'Merriweather'))
 
-ggsave("docs/figures/model_eval.png",
+ggsave("docs/figures/Figure_s4_model_eval.png",
        width = 4, height = 3, dpi = 500)
 
 #### Variable selection ####
@@ -84,82 +84,34 @@ for (sp in species_list) {
 }
 
 vars <- vars %>% mutate(ratio = num / length(species_list)) %>% 
-    filter(ratio > 0.1) %>% 
     mutate(var = ifelse(var == "forest", "Forest coverage",
                         ifelse(var == "human_impact", "Human impact",
                                gsub("bio", "BIO", var)))) %>% 
     mutate(var = ifelse(var == "grassland", "Grassland", var)) %>% 
+    mutate(selected = ifelse(ratio > 0.1, "yes", "no")) %>% 
     mutate(var = fct_reorder(var, num))
 
 write.csv(vars, "results/variable_selection.csv", row.names = FALSE)
 
 ggplot(data = vars, 
        aes(x = num, xend = 0,
-           y = var, yend = var)) +
+           y = var, yend = var,
+           color = selected)) +
     geom_segment() +
     geom_point() +
+    scale_color_manual("", values = c("grey", "black")) +
     xlab("No. of species") + ylab("") +
-    theme_pubclean(base_size = 12, base_family = "Merriweather") +
+    theme_pubclean(base_size = 11, base_family = "Merriweather") +
     theme(axis.text.x = element_text(
         color = "black"),
         axis.text.y = element_text(color = "black"),
+        axis.title = element_text(color = "black", size = 11),
         panel.grid.major.y = element_blank(),
-        axis.title.x = element_text(vjust = -1))
+        axis.title.x = element_text(vjust = -1),
+        legend.position = "none")
 
-ggsave("docs/figures/vars_selected.png",
-       width = 4, height = 3.5, dpi = 500)
-
-# Before removing correlated variables
-vars <- data.frame(
-    var = names(rast(file.path("data/variables/Env", "AllEnv.tif"))),
-    num = 0)
-iter <- 30
-for (sp in species_list) {
-    dr <- file.path(root_dir, "data/variables/variable_list")
-    vars_sl <- read.csv(file.path(dr, sprintf("%s_allruns.csv", sp)))
-    
-    ## Rearrange variables based on the voting results
-    vars_selected <- vars_sl %>% group_by(var) %>% 
-        summarise(n = n()) %>% 
-        filter(n >= floor(iter * 0.5)) %>% # 50% agree
-        arrange(-n) %>% pull(var)
-    
-    if (length(vars_selected) == 0){
-        vars_selected <- vars_sl %>% group_by(var) %>% 
-            summarise(n = n()) %>% 
-            filter(n == max(n)) %>% 
-            pull(var)
-    }
-    
-    vars[vars$var %in% vars_selected, 'num'] <- 
-        vars[vars$var %in% vars_selected, 'num'] + 1
-}
-
-vars <- vars %>% mutate(ratio = num / length(species_list)) %>% 
-    filter(ratio > 0.1) %>% 
-    mutate(var = ifelse(var == "forest", "Forest coverage",
-                        ifelse(var == "human_impact", "Human impact",
-                               gsub("bio", "BIO", var)))) %>% 
-    mutate(var = ifelse(var == "grassland", "Grassland", var)) %>% 
-    mutate(var = fct_reorder(var, num))
-
-write.csv(vars, "results/variable_selection_raw.csv", row.names = FALSE)
-
-ggplot(data = vars, 
-       aes(x = num, xend = 0,
-           y = var, yend = var)) +
-    geom_segment() +
-    geom_point() +
-    xlab("No. of species") + ylab("") +
-    theme_pubclean(base_size = 12, base_family = "Merriweather") +
-    theme(axis.text.x = element_text(
-        color = "black"),
-        axis.text.y = element_text(color = "black"),
-        panel.grid.major.y = element_blank(),
-        axis.title.x = element_text(vjust = -1))
-
-ggsave("docs/figures/vars_selected_raw.png",
-       width = 4, height = 4.5, dpi = 500)
+ggsave("docs/figures/Figure_s2_vars_selected.png",
+       width = 4, height = 4.2, dpi = 500)
 
 #### Impact of drivers ####
 ##### Affected area ####
