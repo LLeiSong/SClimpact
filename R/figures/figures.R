@@ -6,6 +6,7 @@ library(ggplot2)
 library(ggsci)
 library(ggpubr)
 library(rnaturalearth)
+library(rmapshaper)
 library(tidyterra)
 library(forcats)
 library(tidytext)
@@ -113,8 +114,36 @@ ggplot(data = vars,
 ggsave("docs/figures/Figure_s2_vars_selected.png",
        width = 4, height = 4.2, dpi = 500)
 
+#### SHAP: number of Monte Carlo iterations ####
+shaps <- lapply(species_list, function(sp){
+    read.csv(
+        file.path(root_dir, "results/sdm", sp, 
+                  sprintf("shap_cor_%s.csv", sp))) %>% 
+        select(nshap, cor) %>% mutate(species = sp)
+}) %>% bind_rows() %>% filter(nshap > 10)
+
+shaps_mean <- shaps %>% group_by(nshap) %>% 
+    summarise(sd = sd(cor), cor = mean(cor))
+
+ggplot(shaps_mean) +
+    geom_line(data = shaps, aes(x = nshap, y = cor, group = species), 
+              color = "lightgrey", linewidth = 0.2) +
+    geom_line(aes(x = nshap, y = cor)) +
+    geom_vline(xintercept = 1000, color = "darkgrey", linetype = "dashed") +
+    geom_point(aes(x = nshap, y = cor), color = "#EB5B00") +
+    geom_errorbar(aes(x = nshap, ymin = cor - sd, ymax = cor + sd),
+                  color = "#EB5B00", width = 300) +
+    xlab("Number of repetitions (nsim)") + 
+    ylab("Correlation with\nSHAP values(sim = 10,000)") +
+    theme_pubclean(base_size = 11, base_family = "Merriweather") +
+    theme(axis.text.x = element_text(
+        color = "black"),
+        axis.text.y = element_text(color = "black"))
+
+ggsave("docs/figures/Figure_s3_nshap.png",
+       width = 3, height = 4, dpi = 500)
+
 #### Impact of drivers ####
-##### Affected area ####
 data_dir <- "results/climate_change"
 time_periods <- c("2011-2040", "2041-2070", "2071-2100")
 
@@ -130,6 +159,7 @@ var_list <- table(var_list) / length(species_list) * 100
 var_list <- sort(var_list[var_list > 10], decreasing = TRUE)
 features <- names(var_list)
 
+##### Affected area ####
 features_periods <- lapply(time_periods, function(time_period){
     do.call(rbind, lapply(features, function(driver){
         fnames <- list.files(
@@ -173,176 +203,7 @@ features_periods <- lapply(time_periods, function(time_period){
 
 write.csv(features_periods, "results/affect_area.csv", row.names = FALSE)
 
-# Manipulate data for plotting
-pts <- features_periods %>% 
-    mutate(driver = ifelse(
-        driver == "forest", "Forest coverage",
-        ifelse(driver == "human_impact", "Human impact",
-               gsub("bio", "BIO", driver)))) %>% 
-    mutate(driver = ifelse(driver == "grassland", "Grassland", driver))
-
-drivers <- pts %>% filter(time_period == "2011-2040") %>% 
-    group_by(driver) %>% summarise(stou_percent = mean(stou_percent)) %>% 
-    arrange(stou_percent) %>% pull(driver)
-
-pts <- pts %>% 
-    pivot_longer(2:3, names_to = "type", values_to = "value") %>% 
-    mutate(type = factor(
-        type, levels = c("utos_percent", "stou_percent"),
-        labels = c("From unsuitable to suitable", 
-                   "From suitable to unsuitable"))) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-segments <- pts %>% 
-    group_by(driver, type, time_period) %>% 
-    summarise(across(where(is.numeric), max)) %>% 
-    pivot_wider(names_from = time_period, values_from = value) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-# Plot
-ggplot() +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = `2011-2040`, ymax = `2041-2070`, group = type),
-        col = 'grey60', position = position_dodge(.8)) +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = `2041-2070`, ymax = `2071-2100`, group = type),
-        col = 'grey60', position = position_dodge(.8)) +
-    coord_flip() +
-    geom_point(data = pts,
-               aes(y = value, x = driver, col = time_period, group = type),
-               color = "white", fill = "white", size = 2, 
-               position = position_dodge(.8)) +
-    geom_point(data = pts,
-               aes(y = value, x = driver, col = time_period, 
-                   group = type, shape = type, alpha = scenario), size = 2, 
-               position = position_dodge(.8)) +
-    labs(y = "Percentage of affected area",
-         x = element_blank()) +
-    scale_color_brewer(name = "Time period", palette = "Dark2") +
-    scale_shape_manual(name = "", values = c(1, 16)) +
-    scale_alpha_manual(name = "Scenario", values = c(0.4, 0.7, 1.0)) +
-    scale_y_continuous(expand = expansion(mult = 0.01)) +
-    theme_pubclean(base_size = 11, base_family = 'Merriweather') +
-    theme(axis.text = element_text(
-        color = "black", size = 11),
-        strip.background = element_blank(),
-        legend.text = element_text(size = 11),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        legend.justification = c(1.1, 0),
-        legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-        axis.title.x = element_text(vjust = -1),
-        legend.box = 'vertical')
-
-ggsave("docs/figures/affected_area.png",
-       width = 5.5, height = 7, dpi = 500)
-
-##### Affected area simple ####
-# Manipulate data for plotting
-features_periods <- features_periods %>% 
-    group_by(driver, time_period) %>% 
-    summarise(utos_percent = mean(utos_percent),
-              stou_percent = mean(stou_percent))
-pts <- features_periods %>% 
-    mutate(driver = ifelse(
-        driver == "forest", "Forest coverage",
-        ifelse(driver == "human_impact", "Human impact",
-               gsub("bio", "BIO", driver)))) %>% 
-    mutate(driver = ifelse(driver == "grassland", "Grassland coverage", driver))
-
-# Get the driver rank for visualization
-drivers <- pts %>% filter(time_period == "2011-2040") %>% 
-    arrange(stou_percent) %>% pull(driver)
-
-# Manipulate the data for plotting
-pts <- pts %>% 
-    pivot_longer(3:4, names_to = "type", values_to = "value") %>% 
-    mutate(type = factor(
-        type, levels = c("utos_percent", "stou_percent"),
-        labels = c("From unsuitable to suitable", 
-                   "From suitable to unsuitable"))) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-# For transition between time stamps
-segments <- pts %>% 
-    pivot_wider(names_from = time_period, values_from = value) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-# Plot
-ggplot() +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = `2011-2040`, ymax = `2041-2070`, group = type),
-        col = 'grey60', position = position_dodge(.8)) +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = `2041-2070`, ymax = `2071-2100`, group = type),
-        col = 'grey60', position = position_dodge(.8)) +
-    coord_flip() +
-    geom_point(data = pts,
-               aes(y = value, x = driver, group = type),
-               color = "white", fill = "white", size = 2.2, 
-               position = position_dodge(.8)) +
-    geom_point(data = pts,
-               aes(y = value, x = driver, color = time_period,
-                   group = type, shape = type), size = 2, 
-               position = position_dodge(.8)) +
-    geom_point(data = pts %>% filter(time_period != "2011-2040"),
-               aes(y = value - 1.2, x = driver, group = type), color = "grey60",
-               shape = ">", size = 3, 
-               position = position_dodge(.8)) +
-    labs(y = "Percentage of affected area",
-         x = element_blank()) +
-    scale_color_brewer(name = "Time period", palette = "Dark2") +
-    scale_shape_manual(name = "", values = c(1, 16)) +
-    scale_alpha_manual(name = "Scenario", values = c(0.4, 0.7, 1.0)) +
-    scale_y_continuous(expand = expansion(mult = 0.01)) +
-    theme_pubclean(base_size = 11, base_family = 'Merriweather') +
-    theme(axis.text = element_text(
-        color = "black", size = 11),
-        strip.background = element_blank(),
-        legend.text = element_text(size = 11),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        legend.justification = c(1.3, 0),
-        legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-        axis.title.x = element_text(vjust = -1),
-        legend.box = 'vertical')
-
-ggsave("docs/figures/affected_area_simple.png",
-       width = 5.5, height = 7, dpi = 500)
-
-##### Affected area polar ####
-pts <- features_periods %>% 
-    mutate(driver = ifelse(
-        driver == "forest", "Forest\ncoverage",
-        ifelse(driver == "human_impact", "Human\nimpact",
-               gsub("bio", "BIO", driver)))) %>% 
-    mutate(driver = ifelse(driver == "grassland", "Grassland\ncoverage", driver))
-
-# Get the driver rank for visualization
-drivers <- pts %>% 
-    group_by(driver) %>% 
-    summarise(utos_percent = max(utos_percent),
-              stou_percent = max(stou_percent)) %>% 
-    mutate(stou_rank = rank(-stou_percent), 
-           utos_rank = rank(-utos_percent)) %>% 
-    mutate(SqRank = (stou_rank^2) + (utos_rank^2)/2) %>% 
-    mutate(RankOrder = rank(SqRank)) %>% 
-    arrange(RankOrder)
-
-pts <- pts %>% 
-    mutate(driver = factor(
-        driver, levels = drivers$driver, labels = drivers$driver))
-
-ref_values <- pts %>% filter(time_period == "2011-2040")
-labels2 <- pts %>% filter(time_period == "2041-2070")
-labels2$utos_percent <- (labels2$utos_percent - ref_values$utos_percent) / 2 + 
-    ref_values$utos_percent
-labels2$stou_percent <- (labels2$stou_percent - ref_values$stou_percent) / 2 + 
-    ref_values$stou_percent
-
+# Make a delicate legend
 legend_data <- data.frame(y = c(rep(1, 3), rep(2, 3)), 
                           x = rep(1:3, 2)) %>% 
     mutate(y = factor(
@@ -366,64 +227,119 @@ lgd <- ggplot() +
           axis.text = element_text(
               family = 'Merriweather', size = 8, color = "black"))
 
-g <- ggplot() + 
-    geom_col(data = pts %>% filter(time_period == "2071-2100"), 
-             color = "white", fill = "#a6611a", alpha = 0.4,
-             aes(x = driver, y = stou_percent)) +
-    geom_col(data = pts %>% filter(time_period == "2041-2070"), 
-             color = "white", fill = "#a6611a", alpha = 0.6,
-             aes(x = driver, y = stou_percent)) +
-    geom_col(data = pts %>% filter(time_period == "2011-2040"), 
-             color = "white", fill = "#a6611a",
-             aes(x = driver, y = stou_percent)) +
-    geom_col(data = pts %>% filter(time_period == "2071-2100"), 
-             color = "white", fill = "#018571", alpha = 0.4,
-             aes(x = driver, y = -utos_percent)) +
-    geom_col(data = pts %>% filter(time_period == "2041-2070"), 
-             color = "white", fill = "#018571", alpha = 0.6,
-             aes(x = driver, y = -utos_percent)) +
-    geom_col(data = pts %>% filter(time_period == "2011-2040"),
-             aes(x = driver, y = -utos_percent), 
-             color = "white", fill = "#018571") +
-    # text for suitable to unsuitable
-    geom_text(data = pts %>% filter(time_period == "2071-2100"), 
-              aes(x = driver, y = stou_percent + 5, 
-                  label = round(stou_percent, 0)), 
-              color = '#a6611a', size = 2, family = "Merriweather") +
-    geom_text(data = labels2, 
-              aes(x = driver, y = stou_percent, 
-                  label = round(stou_percent, 0)), 
-              color = 'black', size = 2, family = "Merriweather") +
-    geom_text(data = pts %>% filter(time_period == "2011-2040"), 
-              aes(x = driver, y = stou_percent / 2, 
-                  label = round(stou_percent, 0)), 
-              color = 'white', size = 2, family = "Merriweather") +
-    # text for unsuitable to suitable
-    geom_text(data = pts %>% filter(time_period == "2071-2100"), 
-              aes(x = driver, y = -utos_percent - 5, 
-                  label = round(utos_percent, 0)), 
-              color = '#018571', size = 2, family = "Merriweather") +
-    geom_text(data = labels2, 
-              aes(x = driver, y = -utos_percent, 
-                  label = round(utos_percent, 0)), 
-              color = 'black', size = 2, family = "Merriweather") +
-    geom_text(data = pts %>% filter(time_period == "2011-2040"), 
-              aes(x = driver, y = -utos_percent / 2, 
-                  label = round(utos_percent, 0)), 
-              color = 'white', size = 2, family = "Merriweather") +
-    labs(x = "", y = "") +
-    scale_y_continuous(limits = c(-100, 90)) +
-    coord_polar() + theme_minimal(base_family = "Merriweather") +
-    theme(panel.grid.minor = element_blank(),
-          panel.grid.major.y = element_blank(),
-          axis.text.y = element_blank(),
-          axis.text.x = element_text(color = "black", size = 8),
-          plot.margin = unit(c(-0.5, -1, -1, -1), "cm"))
+crs <- "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +datum=WGS84 +units=m +no_defs"
+range_exp <- st_read("data/IUCN/Expert_Maps/Hyaena_hyaena.geojson")
 
-ggarrange(lgd, g, nrow = 2, heights = c(0.2, 1))
+world <- ne_countries(scale = 110) %>% 
+    filter(continent != "Antarctica") %>% 
+    st_union() %>% ms_simplify(keep = 0.2)
 
-ggsave("docs/figures/affected_area_polar.png",
-       width = 5.5, height = 5.5, dpi = 500, bg = "white")
+sphere <- st_graticule(ndiscr = 10000, margin = 10e-6) %>%
+    st_transform(crs = crs) %>%
+    st_convex_hull() %>%
+    summarise(geometry = st_union(geometry))
+
+globe <- ggplot() +
+    geom_sf(data = sphere, fill = "transparent", 
+            color = "black", linewidth = 0.6) +
+    geom_sf(data = world, fill = "transparent", 
+            linewidth = 0.3) +
+    geom_sf(data = range_exp, color = "black", 
+            fill = "black", linewidth = 0.3) +
+    coord_sf(crs = crs) +
+    theme_void() +
+    theme(plot.margin = unit(c(0, -1, 0, -2), "cm"))
+
+for (ssp in c("SSP126", "SSP370", "SSP585")){
+    pts <- features_periods %>% 
+        filter(scenario == ssp) %>% 
+        mutate(driver = ifelse(
+            driver == "forest", "Forest\ncoverage",
+            ifelse(driver == "human_impact", "Human\nimpact",
+                   gsub("bio", "BIO", driver)))) %>% 
+        mutate(driver = ifelse(driver == "grassland", "Grassland\ncoverage", driver))
+    
+    # Get the driver rank for visualization
+    drivers <- pts %>% 
+        filter(time_period == "2011-2040") %>% 
+        mutate(stou_rank = rank(-stou_percent), 
+               utos_rank = rank(-utos_percent)) %>% 
+        mutate(SqRank = (stou_rank^2) + (utos_rank^2)/2) %>% 
+        mutate(RankOrder = rank(SqRank)) %>% 
+        arrange(RankOrder)
+    
+    pts <- pts %>% 
+        mutate(driver = factor(
+            driver, levels = drivers$driver, labels = drivers$driver))
+    
+    ref_values <- pts %>% filter(time_period == "2011-2040")
+    labels2 <- pts %>% filter(time_period == "2041-2070")
+    labels2$utos_percent <- (labels2$utos_percent - ref_values$utos_percent) / 2 + 
+        ref_values$utos_percent
+    labels2$stou_percent <- (labels2$stou_percent - ref_values$stou_percent) / 2 + 
+        ref_values$stou_percent
+    
+    g <- ggplot() + 
+        geom_col(data = pts %>% filter(time_period == "2071-2100"), 
+                 color = "white", fill = "#a6611a", alpha = 0.4,
+                 aes(x = driver, y = stou_percent)) +
+        geom_col(data = pts %>% filter(time_period == "2041-2070"), 
+                 color = "white", fill = "#a6611a", alpha = 0.6,
+                 aes(x = driver, y = stou_percent)) +
+        geom_col(data = pts %>% filter(time_period == "2011-2040"), 
+                 color = "white", fill = "#a6611a",
+                 aes(x = driver, y = stou_percent)) +
+        geom_col(data = pts %>% filter(time_period == "2071-2100"), 
+                 color = "white", fill = "#018571", alpha = 0.4,
+                 aes(x = driver, y = -utos_percent)) +
+        geom_col(data = pts %>% filter(time_period == "2041-2070"), 
+                 color = "white", fill = "#018571", alpha = 0.6,
+                 aes(x = driver, y = -utos_percent)) +
+        geom_col(data = pts %>% filter(time_period == "2011-2040"),
+                 aes(x = driver, y = -utos_percent), 
+                 color = "white", fill = "#018571") +
+        # text for suitable to unsuitable
+        geom_text(data = pts %>% filter(time_period == "2071-2100"), 
+                  aes(x = driver, y = stou_percent + 5, 
+                      label = round(stou_percent, 0)), 
+                  color = '#a6611a', size = 2, family = "Merriweather") +
+        geom_text(data = labels2, 
+                  aes(x = driver, y = stou_percent, 
+                      label = round(stou_percent, 0)), 
+                  color = 'black', size = 2, family = "Merriweather") +
+        geom_text(data = pts %>% filter(time_period == "2011-2040"), 
+                  aes(x = driver, y = stou_percent / 2, 
+                      label = round(stou_percent, 0)), 
+                  color = 'white', size = 2, family = "Merriweather") +
+        # text for unsuitable to suitable
+        geom_text(data = pts %>% filter(time_period == "2071-2100"), 
+                  aes(x = driver, y = -utos_percent - 5, 
+                      label = round(utos_percent, 0)), 
+                  color = '#018571', size = 2, family = "Merriweather") +
+        geom_text(data = labels2, 
+                  aes(x = driver, y = -utos_percent, 
+                      label = round(utos_percent, 0)), 
+                  color = 'black', size = 2, family = "Merriweather") +
+        geom_text(data = pts %>% filter(time_period == "2011-2040"), 
+                  aes(x = driver, y = -utos_percent / 2, 
+                      label = round(utos_percent, 0)), 
+                  color = 'white', size = 2, family = "Merriweather") +
+        labs(x = "", y = "") +
+        scale_y_continuous(limits = c(-100, max(pts$stou_percent) + 5)) +
+        coord_polar() + theme_minimal(base_family = "Merriweather") +
+        theme(panel.grid.minor = element_blank(),
+              panel.grid.major.y = element_blank(),
+              axis.text.y = element_blank(),
+              axis.text.x = element_text(color = "black", size = 8),
+              plot.margin = unit(c(-0.5, -1, -1, -1), "cm"))
+    
+    ggarrange(ggarrange(lgd, globe, nrow = 1, widths = c(0.7, 0.3)), 
+              g, nrow = 2, heights = c(0.2, 1))
+    
+    fname <- ifelse(ssp == "SSP370", "docs/figures/Figure1_turnover_area.png",
+                    sprintf("docs/figures/Figure_s_%s_turnover_area.png", ssp))
+    ggsave(fname, width = 5.5, height = 5.5, dpi = 500, bg = "white")
+}
 
 ##### Affected species ####
 features_periods <- lapply(time_periods, function(time_period){
@@ -488,542 +404,153 @@ features_periods <- lapply(time_periods, function(time_period){
 
 write.csv(features_periods, "results/affect_species.csv", row.names = FALSE)
 
-# Manipulate data for plotting
-pts <- features_periods %>% 
-    select(driver, stou_sp_mean, utos_sp_mean, scenario, time_period) %>% 
-    mutate(driver = ifelse(
-        driver == "forest", "Forest coverage",
-        ifelse(driver == "human_impact", "Human impact",
-               gsub("bio", "BIO", driver)))) %>% 
-    mutate(driver = ifelse(driver == "grassland", "Grassland", driver))
+pseudo_ratio <- st_make_grid(range_exp, square = TRUE, cellsize = 3) %>% 
+    st_as_sf() %>% slice(unique(unlist(st_intersects(range_exp, .)))) %>% 
+    mutate(ratio = runif(n = nrow(.), min = 0, max = 1))
 
-drivers <- pts %>% filter(time_period == "2011-2040") %>% 
-    group_by(driver) %>% summarise(stou_sp_mean = min(stou_sp_mean)) %>% 
-    arrange(stou_sp_mean) %>% pull(driver)
+globe <- ggplot() +
+    geom_sf(data = sphere, fill = "transparent", 
+            color = "black", linewidth = 0.6) +
+    geom_sf(data = world, fill = "transparent", 
+            linewidth = 0.3) +
+    geom_sf(data = pseudo_ratio, aes(fill = ratio),  
+            color = "white", linewidth = 0, show.legend = FALSE) +
+    annotate(
+        geom = "curve", x = 1000000, y = 2000, xend = -500000, yend = -6000000, 
+        curvature = .4, arrow = arrow(length = unit(1, "mm"))
+    ) +
+    annotate(geom = "text", x = -200000, y = -7000000, 
+             label = "Mean", hjust = "left", size = 2, 
+             family = "Merriweather") +
+    scale_fill_tw3("amber") +
+    coord_sf(crs = crs) +
+    theme_void() +
+    theme(plot.margin = unit(c(0, -1, 0, -2), "cm"))
 
-pts <- pts %>% 
-    pivot_longer(2:3, names_to = "type", values_to = "value") %>% 
-    mutate(type = factor(
-        type, levels = c("utos_sp_mean", "stou_sp_mean"),
-        labels = c("From unsuitable to suitable", 
-                   "From suitable to unsuitable"))) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-segments <- pts %>% 
-    group_by(driver, type) %>% 
-    summarise(vmin = min(value), vmax = max(value)) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-# Plot
-ggplot() +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = vmin, ymax = vmax, group = type),
-        col = 'grey60', position = position_dodge(.8)) +
-    coord_flip() +
-    geom_point(data = pts,
-               aes(y = value, x = driver, col = time_period, group = type),
-               color = "white", fill = "white", size = 2, 
-               position = position_dodge(.8)) +
-    geom_point(data = pts,
-               aes(y = value, x = driver, col = time_period, 
-                   group = type, shape = type, alpha = scenario), size = 2, 
-               position = position_dodge(.8)) +
-    labs(y = "Percentage of affected species per pixel",
-         x = element_blank()) +
-    scale_color_brewer(name = "Time period", palette = "Dark2") +
-    scale_shape_manual(name = "", values = c(1, 16)) +
-    scale_alpha_manual(name = "Scenario", values = c(0.4, 0.7, 1.0)) +
-    scale_y_continuous(expand = expansion(mult = 0.01)) +
-    theme_pubclean(base_size = 11, base_family = 'Merriweather') +
-    theme(axis.text = element_text(
-        color = "black", size = 11),
-        strip.background = element_blank(),
-        legend.text = element_text(size = 11),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        legend.justification = c(1.3, 0),
-        legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-        axis.title.x = element_text(vjust = -1),
-        legend.box = 'vertical')
-
-ggsave("docs/figures/affected_species.png",
-       width = 5.5, height = 7, dpi = 500)
-
-# The table
-tb <- features_periods
-tb$stou_sp <- sprintf("%.1f±%.1f", tb$stou_sp_mean, tb$stou_sp_sd)
-tb$utos_sp <- sprintf("%.1f±%.1f", tb$utos_sp_mean, tb$utos_sp_sd)
-tb <- tb %>% select(driver, scenario, time_period, stou_sp, utos_sp)
-
-##### Affected species simple ####
-# Manipulate data for plotting
-features_periods <- features_periods %>% 
-    group_by(driver, time_period) %>% 
-    summarise(stou_sp_mean = mean(stou_sp_mean),
-              utos_sp_mean = mean(utos_sp_mean))
-
-pts <- features_periods %>% 
-    mutate(driver = ifelse(
-        driver == "forest", "Forest coverage",
-        ifelse(driver == "human_impact", "Human impact",
-               gsub("bio", "BIO", driver)))) %>% 
-    mutate(driver = ifelse(driver == "grassland", "Grassland coverage", driver))
-
-drivers <- pts %>% filter(time_period == "2011-2040") %>% 
-    arrange(stou_sp_mean) %>% pull(driver)
-
-pts <- pts %>% 
-    pivot_longer(3:4, names_to = "type", values_to = "value") %>% 
-    mutate(type = factor(
-        type, levels = c("utos_sp_mean", "stou_sp_mean"),
-        labels = c("From unsuitable to suitable", 
-                   "From suitable to unsuitable"))) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-segments <- pts %>% 
-    pivot_wider(names_from = time_period, values_from = value) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-# arrows
-pts_arrows_pos <- pts %>% 
-    pivot_wider(names_from = time_period, values_from = value) %>% 
-    mutate(range1 = `2041-2070` - `2011-2040`,
-           range2 = `2071-2100` - `2041-2070`) %>% 
-    mutate(`2041-2070` = ifelse(range1 < 1, NA, `2041-2070`),
-           `2071-2100` = ifelse(range2 < 1, NA, `2071-2100`))
-
-pts_arrows_neg <- pts %>% 
-    pivot_wider(names_from = time_period, values_from = value) %>% 
-    mutate(range1 = `2041-2070` - `2011-2040`,
-           range2 = `2071-2100` - `2041-2070`) %>% 
-    mutate(`2041-2070` = ifelse(range1 <= -1, `2041-2070`, NA),
-           `2071-2100` = ifelse(range2 <= -1, `2071-2100`, NA))
-
-# Plot
-ggplot() +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = `2011-2040`, ymax = `2041-2070`, group = type),
-        col = 'grey60', position = position_dodge(.8)) +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = `2041-2070`, ymax = `2071-2100`, group = type),
-        col = 'grey60', position = position_dodge(.8)) +
-    coord_flip() +
-    geom_point(data = pts,
-               aes(y = value, x = driver, group = type),
-               color = "white", fill = "white", size = 2.2,
-               position = position_dodge(.8)) +
-    geom_point(data = pts,
-               aes(y = value, x = driver, color = time_period,
-                   group = type, shape = type), size = 2, 
-               position = position_dodge(.8)) +
-    geom_point(data = pts_arrows_pos,
-               aes(y = `2041-2070` - 0.5, x = driver, group = type), 
-               color = "grey60", shape = ">", size = 3,
-               position = position_dodge(.8)) +
-    geom_point(data = pts_arrows_pos,
-               aes(y = `2071-2100` - 0.5, x = driver, group = type), 
-               color = "grey60", shape = ">", size = 3,
-               position = position_dodge(.8)) +
-    geom_point(data = pts_arrows_neg,
-               aes(y = `2041-2070` + 0.5, x = driver, group = type), 
-               color = "grey60", shape = "<", size = 3,
-               position = position_dodge(.8)) +
-    geom_point(data = pts_arrows_neg,
-               aes(y = `2071-2100` + 0.5, x = driver, group = type), 
-               color = "grey60", shape = "<", size = 3,
-               position = position_dodge(.8)) +
-    labs(y = "Percentage of affected species per pixel",
-         x = element_blank()) +
-    scale_color_brewer(name = "Time period", palette = "Dark2") +
-    scale_shape_manual(name = "", values = c(1, 16)) +
-    scale_alpha_manual(name = "Scenario", values = c(0.4, 0.7, 1.0)) +
-    scale_y_continuous(expand = expansion(mult = 0.01)) +
-    theme_pubclean(base_size = 11, base_family = 'Merriweather') +
-    theme(axis.text = element_text(
-        color = "black", size = 11),
-        strip.background = element_blank(),
-        legend.text = element_text(size = 11),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        legend.justification = c(1.3, 0),
-        legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-        axis.title.x = element_text(vjust = -1),
-        legend.box = 'vertical')
-
-ggsave("docs/figures/affected_species_simple.png",
-       width = 5.5, height = 7, dpi = 500)
-
-##### Affected species polar ####
-pts <- features_periods %>% 
+pts_all <- features_periods %>% 
     mutate(driver = ifelse(
         driver == "forest", "Forest\ncoverage",
         ifelse(driver == "human_impact", "Human\nimpact",
                gsub("bio", "BIO", driver)))) %>% 
     mutate(driver = ifelse(driver == "grassland", "Grassland\ncoverage", driver))
 
-# Get the driver rank for visualization
-drivers <- pts %>% 
-    group_by(driver) %>% 
-    summarise(stou_sp_mean = max(stou_sp_mean),
-              utos_sp_mean = max(utos_sp_mean)) %>% 
-    mutate(stou_rank = rank(-stou_sp_mean), 
-           utos_rank = rank(-utos_sp_mean)) %>% 
-    mutate(SqRank = (stou_rank^2) + (utos_rank^2)/2) %>% 
-    mutate(RankOrder = rank(SqRank)) %>% 
-    arrange(RankOrder)
+for (ssp in c("SSP126", "SSP370", "SSP585")){
+    # Get the driver rank for visualization
+    drivers <- pts_all %>% 
+        filter(scenario == ssp & time_period == "2011-2040") %>% 
+        mutate(stou_rank = rank(-stou_sp_mean), 
+               utos_rank = rank(-utos_sp_mean)) %>% 
+        mutate(SqRank = (stou_rank^2) + (utos_rank^2)/2) %>% 
+        mutate(RankOrder = rank(SqRank)) %>% 
+        arrange(RankOrder)
+    
+    pts <- pts_all %>% 
+        filter(scenario == ssp) %>% 
+        mutate(driver = factor(
+            driver, levels = drivers$driver, labels = drivers$driver))
+    
+    bio14 <- pts %>% filter(driver == "BIO14")
+    pts[pts$driver == "BIO14", "utos_sp_mean"] <- NA
+    
+    ref_values <- pts %>% filter(time_period == "2011-2040")
+    labels2 <- pts %>% filter(time_period == "2041-2070")
+    labels2$utos_sp_mean <- (labels2$utos_sp_mean - ref_values$utos_sp_mean) / 2 + 
+        ref_values$utos_sp_mean
+    labels2$stou_sp_mean <- (labels2$stou_sp_mean - ref_values$stou_sp_mean) / 2 + 
+        ref_values$stou_sp_mean
+    
+    if (ssp == "SSP126"){
+        dodge <- 4
+    } else (dodge <- 3)
+    
+    g <- ggplot() + 
+        geom_col(data = pts %>% filter(time_period == "2071-2100"), 
+                 color = "white", fill = "#a6611a", alpha = 0.4,
+                 aes(x = driver, y = stou_sp_mean)) +
+        geom_col(data = pts %>% filter(time_period == "2041-2070"), 
+                 color = "white", fill = "#a6611a", alpha = 0.6,
+                 aes(x = driver, y = stou_sp_mean)) +
+        geom_col(data = pts %>% filter(time_period == "2011-2040"), 
+                 color = "white", fill = "#a6611a",
+                 aes(x = driver, y = stou_sp_mean)) +
+        geom_col(data = pts %>% filter(time_period == "2071-2100"), 
+                 color = "white", fill = "#018571", alpha = 0.4,
+                 aes(x = driver, y = -utos_sp_mean)) +
+        geom_col(data = pts %>% filter(time_period == "2041-2070"), 
+                 color = "white", fill = "#018571", alpha = 0.6,
+                 aes(x = driver, y = -utos_sp_mean)) +
+        geom_col(data = pts %>% filter(time_period == "2011-2040"),
+                 aes(x = driver, y = -utos_sp_mean), 
+                 color = "white", fill = "#018571") +
+        # text for suitable to unsuitable
+        geom_text(data = pts %>% filter(time_period == "2071-2100"), 
+                  aes(x = driver, y = stou_sp_mean + dodge, 
+                      label = round(stou_sp_mean, 0)), 
+                  color = '#a6611a', size = 2, family = "Merriweather") +
+        geom_text(data = labels2, 
+                  aes(x = driver, y = stou_sp_mean, 
+                      label = round(stou_sp_mean, 0)), 
+                  color = 'black', size = 2, family = "Merriweather") +
+        geom_text(data = pts %>% filter(time_period == "2011-2040"), 
+                  aes(x = driver, y = stou_sp_mean / 2, 
+                      label = round(stou_sp_mean, 0)), 
+                  color = 'white', size = 2, family = "Merriweather") +
+        # text for unsuitable to suitable
+        geom_text(data = pts %>% filter(time_period == "2071-2100"), 
+                  aes(x = driver, y = -utos_sp_mean - dodge, 
+                      label = round(utos_sp_mean, 0)), 
+                  color = '#018571', size = 2, family = "Merriweather") +
+        geom_text(data = labels2, 
+                  aes(x = driver, y = -utos_sp_mean, 
+                      label = round(utos_sp_mean, 0)), 
+                  color = 'black', size = 2, family = "Merriweather") +
+        geom_text(data = pts %>% filter(time_period == "2011-2040"), 
+                  aes(x = driver, y = -utos_sp_mean / 2, 
+                      label = round(utos_sp_mean, 0)), 
+                  color = 'white', size = 2, family = "Merriweather") +
+        geom_col(data = bio14 %>% filter(time_period == "2011-2040"),
+                 aes(x = driver, y = -utos_sp_mean), 
+                 color = "white", fill = "#018571") +
+        geom_col(data = bio14 %>% filter(time_period == "2041-2070"),
+                 aes(x = driver, y = -utos_sp_mean), 
+                 color = "white", fill = "white") +
+        geom_col(data = bio14 %>% filter(time_period == "2041-2070"),
+                 aes(x = driver, y = -utos_sp_mean), 
+                 color = "white", fill = "#018571", alpha = 0.6) +
+        geom_col(data = bio14 %>% filter(time_period == "2071-2100"),
+                 aes(x = driver, y = -utos_sp_mean), 
+                 color = "white", fill = "#018571", alpha = 0.4) +
+        geom_text(data = bio14 %>% filter(time_period == "2041-2070"), 
+                  aes(x = driver, y = -utos_sp_mean / 2, 
+                      label = round(utos_sp_mean, 0)), 
+                  color = 'white', size = 2, family = "Merriweather") +
+        geom_text(data = bio14 %>% filter(time_period == "2011-2040"), 
+                  aes(x = driver, y = -utos_sp_mean - dodge, 
+                      label = round(utos_sp_mean, 0)), 
+                  color = '#018571', size = 2, family = "Merriweather") +
+        geom_text(data = bio14 %>% filter(time_period == "2071-2100"), 
+                  aes(x = driver, y = -utos_sp_mean, 
+                      label = round(utos_sp_mean, 0)), 
+                  color = 'black', size = 2, family = "Merriweather") +
+        labs(x = "", y = "") +
+        scale_y_continuous(limits = c(-45, 
+                                      max(pts$stou_sp_mean) + 5)) +
+        coord_polar() + theme_minimal(base_family = "Merriweather") +
+        theme(panel.grid.minor = element_blank(),
+              panel.grid.major.y = element_blank(),
+              axis.text.y = element_blank(),
+              axis.text.x = element_text(color = "black", size = 8),
+              plot.margin = unit(c(-0.5, -1, -1, -1), "cm"))
+    
+    ggarrange(ggarrange(lgd, globe, nrow = 1, widths = c(0.7, 0.3)), 
+              g, nrow = 2, heights = c(0.2, 1))
+    
+    fname <- ifelse(ssp == "SSP370", "docs/figures/Figure2_shifts_area.png",
+                    sprintf("docs/figures/Figure_s_%s_shifts_area.png", ssp))
+    ggsave(fname, width = 5.5, height = 5.5, dpi = 500, bg = "white")
+}
 
-pts <- pts %>% 
-    mutate(driver = factor(
-        driver, levels = drivers$driver, labels = drivers$driver))
-
-bio14 <- pts %>% filter(driver == "BIO14")
-pts[pts$driver == "BIO14", "utos_sp_mean"] <- NA
-
-ref_values <- pts %>% filter(time_period == "2011-2040")
-labels2 <- pts %>% filter(time_period == "2041-2070")
-labels2$utos_sp_mean <- (labels2$utos_sp_mean - ref_values$utos_sp_mean) / 2 + 
-    ref_values$utos_sp_mean
-labels2$stou_sp_mean <- (labels2$stou_sp_mean - ref_values$stou_sp_mean) / 2 + 
-    ref_values$stou_sp_mean
-
-legend_data <- data.frame(y = c(rep(1, 3), rep(2, 3)), 
-                          x = rep(1:3, 2)) %>% 
-    mutate(y = factor(
-        y, levels = 1:2, labels = c("From unsuitable to suitable",
-                                    "From suitable to unsuitable")),
-        x = factor(x, levels = 1:3,
-                   labels = c("2011-2040", "2041-2070", "2071-2100"))) %>% 
-    mutate(color = y, alpha = x)
-
-lgd <- ggplot() +
-    geom_tile(data = legend_data, 
-              aes(x = x, y = y, fill = factor(color),
-                  alpha = alpha), color = "white", linewidth = 2) +
-    scale_fill_manual(values = c("#018571", '#a6611a')) +
-    scale_alpha_manual(values = c(1, 0.6, 0.4)) +
-    scale_x_discrete(position = "top") +
-    theme_minimal() +
-    theme(legend.position = "none", 
-          panel.grid = element_blank(),
-          axis.title = element_blank(),
-          axis.text = element_text(
-              family = 'Merriweather', size = 8, color = "black"))
-
-g <- ggplot() + 
-    geom_col(data = pts %>% filter(time_period == "2071-2100"), 
-             color = "white", fill = "#a6611a", alpha = 0.4,
-             aes(x = driver, y = stou_sp_mean)) +
-    geom_col(data = pts %>% filter(time_period == "2041-2070"), 
-             color = "white", fill = "#a6611a", alpha = 0.6,
-             aes(x = driver, y = stou_sp_mean)) +
-    geom_col(data = pts %>% filter(time_period == "2011-2040"), 
-             color = "white", fill = "#a6611a",
-             aes(x = driver, y = stou_sp_mean)) +
-    geom_col(data = pts %>% filter(time_period == "2071-2100"), 
-             color = "white", fill = "#018571", alpha = 0.4,
-             aes(x = driver, y = -utos_sp_mean)) +
-    geom_col(data = pts %>% filter(time_period == "2041-2070"), 
-             color = "white", fill = "#018571", alpha = 0.6,
-             aes(x = driver, y = -utos_sp_mean)) +
-    geom_col(data = pts %>% filter(time_period == "2011-2040"),
-             aes(x = driver, y = -utos_sp_mean), 
-             color = "white", fill = "#018571") +
-    # text for suitable to unsuitable
-    geom_text(data = pts %>% filter(time_period == "2071-2100"), 
-              aes(x = driver, y = stou_sp_mean + 3, 
-                  label = round(stou_sp_mean, 0)), 
-              color = '#a6611a', size = 2, family = "Merriweather") +
-    geom_text(data = labels2, 
-              aes(x = driver, y = stou_sp_mean, 
-                  label = round(stou_sp_mean, 0)), 
-              color = 'black', size = 2, family = "Merriweather") +
-    geom_text(data = pts %>% filter(time_period == "2011-2040"), 
-              aes(x = driver, y = stou_sp_mean / 2, 
-                  label = round(stou_sp_mean, 0)), 
-              color = 'white', size = 2, family = "Merriweather") +
-    # text for unsuitable to suitable
-    geom_text(data = pts %>% filter(time_period == "2071-2100"), 
-              aes(x = driver, y = -utos_sp_mean - 3, 
-                  label = round(utos_sp_mean, 0)), 
-              color = '#018571', size = 2, family = "Merriweather") +
-    geom_text(data = labels2, 
-              aes(x = driver, y = -utos_sp_mean, 
-                  label = round(utos_sp_mean, 0)), 
-              color = 'black', size = 2, family = "Merriweather") +
-    geom_text(data = pts %>% filter(time_period == "2011-2040"), 
-              aes(x = driver, y = -utos_sp_mean / 2, 
-                  label = round(utos_sp_mean, 0)), 
-              color = 'white', size = 2, family = "Merriweather") +
-    geom_col(data = bio14 %>% filter(time_period == "2011-2040"),
-             aes(x = driver, y = -utos_sp_mean), 
-             color = "white", fill = "#018571") +
-    geom_col(data = bio14 %>% filter(time_period == "2041-2070"),
-             aes(x = driver, y = -utos_sp_mean), 
-             color = "white", fill = "white") +
-    geom_col(data = bio14 %>% filter(time_period == "2041-2070"),
-             aes(x = driver, y = -utos_sp_mean), 
-             color = "white", fill = "#018571", alpha = 0.6) +
-    geom_col(data = bio14 %>% filter(time_period == "2071-2100"),
-             aes(x = driver, y = -utos_sp_mean), 
-             color = "white", fill = "#018571", alpha = 0.4) +
-    geom_text(data = bio14 %>% filter(time_period == "2041-2070"), 
-              aes(x = driver, y = -utos_sp_mean / 2, 
-                  label = round(utos_sp_mean, 0)), 
-              color = 'white', size = 2, family = "Merriweather") +
-    geom_text(data = bio14 %>% filter(time_period == "2011-2040"), 
-              aes(x = driver, y = -utos_sp_mean - 3, 
-                  label = round(utos_sp_mean, 0)), 
-              color = '#018571', size = 2, family = "Merriweather") +
-    geom_text(data = bio14 %>% filter(time_period == "2071-2100"), 
-              aes(x = driver, y = -utos_sp_mean, 
-                  label = round(utos_sp_mean, 0)), 
-              color = 'black', size = 2, family = "Merriweather") +
-    labs(x = "", y = "") +
-    scale_y_continuous(limits = c(-40, 40)) +
-    coord_polar() + theme_minimal(base_family = "Merriweather") +
-    theme(panel.grid.minor = element_blank(),
-          panel.grid.major.y = element_blank(),
-          axis.text.y = element_blank(),
-          axis.text.x = element_text(color = "black", size = 8),
-          plot.margin = unit(c(-0.5, -1, -1, -1), "cm"))
-
-ggarrange(lgd, g, nrow = 2, heights = c(0.2, 1))
-
-ggsave("docs/figures/affected_species_polar.png",
-       width = 5.5, height = 5.5, dpi = 500, bg = "white")
-
-#### SHAP value change ####
-features_periods <- lapply(time_periods, function(time_period){
-    do.call(rbind, lapply(features, function(driver){
-        fnames <- list.files(
-            data_dir, pattern = sprintf("%s.tif", time_period), full.names = TRUE)
-        fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
-        
-        val_fnames <- fnames[str_detect(fnames, sprintf("val_change_%s", driver))]
-        num_fnames <- fnames[str_detect(fnames, "num_species")]
-        
-        # Suitable
-        ss <- do.call(c, lapply(1:length(val_fnames), function(i){
-            rast(val_fnames[i])[[1]] / rast(num_fnames[i])[[2]]
-        })); names(ss) <- c("SSP126", "SSP370", "SSP580")
-        ss <- trim(ss)
-        
-        # Unsuitable
-        uss <- do.call(c, lapply(1:length(val_fnames), function(i){
-            rast(val_fnames[i])[[2]] / rast(num_fnames[i])[[3]]
-        })); names(uss) <- c("SSP126", "SSP370", "SSP580")
-        uss <- trim(uss)
-        
-        ss_val <- c(cellSize(ss, unit = "km"), ss)
-        ss_val <- values(ss_val) %>% na.omit() %>% as.data.frame()
-        
-        ssp126 <- ss_val %>% select(area, SSP126) %>%
-            filter(SSP126 >= quantile(SSP126, 0.01) & SSP126 <= quantile(SSP126, 0.99))
-        ssp370 <- ss_val %>% select(area, SSP370) %>%
-            filter(SSP370 >= quantile(SSP370, 0.01) & SSP370 <= quantile(SSP370, 0.99))
-        ssp580 <- ss_val %>% select(area, SSP580) %>%
-            filter(SSP580 >= quantile(SSP580, 0.01) & SSP580 <= quantile(SSP580, 0.99))
-        
-        ss_sds <- c(wtd.var(ssp126$SSP126, ssp126$area),
-                    wtd.var(ssp370$SSP370, ssp370$area),
-                    wtd.var(ssp580$SSP580, ssp580$area))
-        
-        ss_means <- c(wtd.mean(ssp126$SSP126, ssp126$area),
-                      wtd.mean(ssp370$SSP370, ssp370$area),
-                      wtd.mean(ssp580$SSP580, ssp580$area))
-        
-        uss_val <- c(cellSize(uss, unit = "km"), uss)
-        uss_val <- values(uss_val) %>% na.omit() %>% as.data.frame()
-        
-        ssp126 <- uss_val %>% select(area, SSP126) %>%
-            filter(SSP126 >= quantile(SSP126, 0.01) & SSP126 <= quantile(SSP126, 0.99))
-        ssp370 <- uss_val %>% select(area, SSP370) %>%
-            filter(SSP370 >= quantile(SSP370, 0.01) & SSP370 <= quantile(SSP370, 0.99))
-        ssp580 <- uss_val %>% select(area, SSP580) %>%
-            filter(SSP580 >= quantile(SSP580, 0.01) & SSP580 <= quantile(SSP580, 0.99))
-        
-        uss_sds <- c(wtd.var(ssp126$SSP126, ssp126$area),
-                     wtd.var(ssp370$SSP370, ssp370$area),
-                     wtd.var(ssp580$SSP580, ssp580$area))
-        
-        uss_means <- c(wtd.mean(ssp126$SSP126, ssp126$area),
-                       wtd.mean(ssp370$SSP370, ssp370$area),
-                       wtd.mean(ssp580$SSP580, ssp580$area))
-        
-        data.frame(driver = driver, 
-                   suitable_change = ss_means,
-                   suitable_sd = ss_sds,
-                   unsuitable_change = uss_means,
-                   unsuitable_sd = uss_sds) %>% 
-            mutate(scenario = c("SSP126", "SSP370", "SSP585"))
-    })) %>% mutate(time_period = time_period)
-}) %>% bind_rows()
-
-write.csv(features_periods, "results/shap_value_change.csv", row.names = FALSE)
-
-# Manipulate data for plotting
-pts <- features_periods %>% 
-    select(driver, suitable_change, unsuitable_change, scenario, time_period) %>% 
-    mutate(driver = ifelse(driver == "forest", "Forest coverage",
-                           ifelse(driver == "human_impact", "Human impact",
-                                  gsub("bio", "BIO", driver)))) %>% 
-    mutate(driver = ifelse(driver == "grassland", "Grassland", driver))
-
-drivers <- pts %>% filter(time_period == "2011-2040") %>% 
-    group_by(driver) %>% summarise(suitable_change = mean(suitable_change)) %>% 
-    arrange(-suitable_change) %>% pull(driver)
-
-pts <- pts %>% 
-    pivot_longer(2:3, names_to = "type", values_to = "value") %>% 
-    mutate(type = factor(
-        type, levels = c("suitable_change", "unsuitable_change"),
-        labels = c("Current suitable area", "Current unsuitable area"))) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-segments <- pts %>% 
-    group_by(driver, type) %>% 
-    summarise(vmin = min(value), vmax = max(value)) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-# Plot
-ggplot() +
-    geom_hline(yintercept = 0, color = "grey", linetype = "dashed") +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = vmin, ymax = vmax, group = type),
-        col = 'grey60', position = position_dodge(.8)) +
-    coord_flip() +
-    geom_point(data = pts,
-               aes(y = value, x = driver, col = time_period, group = type),
-               color = "white", fill = "white", size = 2, 
-               position = position_dodge(.8)) +
-    geom_point(data = pts,
-               aes(y = value, x = driver, col = time_period, 
-                   group = type, shape = type, alpha = scenario), size = 2, 
-               position = position_dodge(.8)) +
-    labs(y = "SHAP value change",
-         x = element_blank()) +
-    scale_color_brewer(name = "Time period", palette = "Dark2") +
-    scale_shape_manual(name = "", values = c(16, 1)) +
-    scale_alpha_manual(name = "Scenario", values = c(0.4, 0.7, 1.0)) +
-    scale_y_continuous(expand = expansion(mult = 0.01)) +
-    theme_pubclean(base_size = 11, base_family = 'Merriweather') +
-    theme(axis.text = element_text(
-        color = "black", size = 11),
-        strip.background = element_blank(),
-        legend.text = element_text(size = 11),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        legend.justification = c(-1, 0),
-        legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-        axis.title.x = element_text(vjust = -1),
-        legend.box = 'vertical')
-
-ggsave("docs/figures/shap_change.png",
-       width = 6.5, height = 6, dpi = 500)
-
-# The table
-tb <- features_periods
-tb$suitable_change <- sprintf("%.3f±%.3f", tb$suitable_change, tb$suitable_sd)
-tb$unsuitable_change <- sprintf("%.3f±%.3f", tb$unsuitable_change, tb$unsuitable_sd)
-tb <- tb %>% select(driver, scenario, time_period, suitable_change, unsuitable_change)
-
-##### Simple version ####
-# Manipulate data for plotting
-features_periods <- features_periods %>% 
-    group_by(driver, time_period) %>% 
-    summarise(suitable_change = mean(suitable_change),
-              unsuitable_change = mean(unsuitable_change))
-
-pts <- features_periods %>% 
-    mutate(driver = ifelse(driver == "forest", "Forest coverage",
-                           ifelse(driver == "human_impact", "Human impact",
-                                  gsub("bio", "BIO", driver)))) %>% 
-    mutate(driver = ifelse(driver == "grassland", "Grassland coverage", driver))
-
-drivers <- pts %>% filter(time_period == "2011-2040") %>% 
-    arrange(-suitable_change) %>% pull(driver)
-
-pts <- pts %>% 
-    pivot_longer(3:4, names_to = "type", values_to = "value") %>% 
-    mutate(type = factor(
-        type, levels = c("suitable_change", "unsuitable_change"),
-        labels = c("Current suitable area", "Current unsuitable area"))) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-segments <- pts %>% 
-    pivot_wider(names_from = time_period, values_from = value) %>% 
-    mutate(driver = factor(driver, levels = drivers, labels = drivers))
-
-# arrows
-pts_arrows_pos <- pts %>% 
-    pivot_wider(names_from = time_period, values_from = value) %>% 
-    mutate(range1 = `2041-2070` - `2011-2040`,
-           range2 = `2071-2100` - `2041-2070`) %>% 
-    mutate(`2041-2070` = ifelse(range1 < 0.003, NA, `2041-2070`),
-           `2071-2100` = ifelse(range2 < 0.003, NA, `2071-2100`))
-
-pts_arrows_neg <- pts %>% 
-    pivot_wider(names_from = time_period, values_from = value) %>% 
-    mutate(range1 = `2041-2070` - `2011-2040`,
-           range2 = `2071-2100` - `2041-2070`) %>% 
-    mutate(`2041-2070` = ifelse(range1 <= -0.003, `2041-2070`, NA),
-           `2071-2100` = ifelse(range2 <= -0.003, `2071-2100`, NA))
-
-# Plot
-ggplot() +
-    geom_hline(yintercept = 0, color = "grey", linetype = "dashed") +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = `2011-2040`, ymax = `2041-2070`, group = type),
-        col = 'grey60') +
-    geom_linerange(
-        data = segments,
-        aes(x = driver, ymin = `2041-2070`, ymax = `2071-2100`, group = type),
-        col = 'grey60') +
-    coord_flip() +
-    geom_point(data = pts,
-               aes(y = value, x = driver, col = time_period, group = type),
-               color = "white", fill = "white", size = 2.2) +
-    geom_point(data = pts,
-               aes(y = value, x = driver, col = time_period, 
-                   group = type, shape = type), size = 2) +
-    geom_point(data = pts_arrows_pos,
-               aes(y = `2041-2070` - 0.0015, x = driver, group = type), 
-               color = "grey60", shape = ">", size = 3) +
-    geom_point(data = pts_arrows_pos,
-               aes(y = `2071-2100` - 0.0015, x = driver, group = type), 
-               color = "grey60", shape = ">", size = 3) +
-    geom_point(data = pts_arrows_neg,
-               aes(y = `2041-2070` + 0.0015, x = driver, group = type), 
-               color = "grey60", shape = "<", size = 3) +
-    geom_point(data = pts_arrows_neg,
-               aes(y = `2071-2100` + 0.0015, x = driver, group = type), 
-               color = "grey60", shape = "<", size = 3) +
-    labs(y = "SHAP value change",
-         x = element_blank()) +
-    scale_color_brewer(name = "Time period", palette = "Dark2") +
-    scale_shape_manual(name = "", values = c(16, 1)) +
-    scale_y_continuous(expand = expansion(mult = 0.01)) +
-    theme_pubclean(base_size = 11, base_family = 'Merriweather') +
-    theme(axis.text = element_text(
-        color = "black", size = 11),
-        legend.text = element_text(size = 11),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        legend.justification = c(-3, 0),
-        legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-        axis.title.x = element_text(vjust = -1, hjust = 0.32),
-        plot.subtitle = element_text(size = 10, vjust = -25, hjust = 2.7),
-        legend.box = 'vertical')
-
-ggsave("docs/figures/shap_change_simple.png",
-       width = 6.5, height = 6, dpi = 500)
-
-#### Individual impact ####
+#### Spatial turnover of individual variable ####
 # Set interested driver and projection for visualization
 plot_crs <- "ESRI:54030"
 
@@ -1206,52 +733,289 @@ for (driver in features){
            width = 6, height = 8, dpi = 500)
 }
 
-#### Variable change - SHAP change ####
+#### SHAP magnitude shifts ####
+features_periods <- lapply(time_periods, function(time_period){
+    do.call(rbind, lapply(features, function(driver){
+        fnames <- list.files(
+            data_dir, pattern = sprintf("%s.tif", time_period), full.names = TRUE)
+        fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
+        
+        val_fnames <- fnames[str_detect(fnames, sprintf("val_change_%s", driver))]
+        num_fnames <- fnames[str_detect(fnames, "num_species")]
+        
+        # Suitable
+        ss <- do.call(c, lapply(1:length(val_fnames), function(i){
+            rast(val_fnames[i])[[1]] / rast(num_fnames[i])[[2]]
+        })); names(ss) <- c("SSP126", "SSP370", "SSP580")
+        ss <- trim(ss)
+        
+        # Unsuitable
+        uss <- do.call(c, lapply(1:length(val_fnames), function(i){
+            rast(val_fnames[i])[[2]] / rast(num_fnames[i])[[3]]
+        })); names(uss) <- c("SSP126", "SSP370", "SSP580")
+        uss <- trim(uss)
+        
+        ss_val <- c(cellSize(ss, unit = "km"), ss)
+        ss_val <- values(ss_val) %>% na.omit() %>% as.data.frame()
+        
+        ssp126 <- ss_val %>% select(area, SSP126) %>%
+            filter(SSP126 >= quantile(SSP126, 0.01) & SSP126 <= quantile(SSP126, 0.99))
+        ssp370 <- ss_val %>% select(area, SSP370) %>%
+            filter(SSP370 >= quantile(SSP370, 0.01) & SSP370 <= quantile(SSP370, 0.99))
+        ssp580 <- ss_val %>% select(area, SSP580) %>%
+            filter(SSP580 >= quantile(SSP580, 0.01) & SSP580 <= quantile(SSP580, 0.99))
+        
+        ss_sds <- c(wtd.var(ssp126$SSP126, ssp126$area),
+                    wtd.var(ssp370$SSP370, ssp370$area),
+                    wtd.var(ssp580$SSP580, ssp580$area))
+        
+        ss_means <- c(wtd.mean(ssp126$SSP126, ssp126$area),
+                      wtd.mean(ssp370$SSP370, ssp370$area),
+                      wtd.mean(ssp580$SSP580, ssp580$area))
+        
+        uss_val <- c(cellSize(uss, unit = "km"), uss)
+        uss_val <- values(uss_val) %>% na.omit() %>% as.data.frame()
+        
+        ssp126 <- uss_val %>% select(area, SSP126) %>%
+            filter(SSP126 >= quantile(SSP126, 0.01) & SSP126 <= quantile(SSP126, 0.99))
+        ssp370 <- uss_val %>% select(area, SSP370) %>%
+            filter(SSP370 >= quantile(SSP370, 0.01) & SSP370 <= quantile(SSP370, 0.99))
+        ssp580 <- uss_val %>% select(area, SSP580) %>%
+            filter(SSP580 >= quantile(SSP580, 0.01) & SSP580 <= quantile(SSP580, 0.99))
+        
+        uss_sds <- c(wtd.var(ssp126$SSP126, ssp126$area),
+                     wtd.var(ssp370$SSP370, ssp370$area),
+                     wtd.var(ssp580$SSP580, ssp580$area))
+        
+        uss_means <- c(wtd.mean(ssp126$SSP126, ssp126$area),
+                       wtd.mean(ssp370$SSP370, ssp370$area),
+                       wtd.mean(ssp580$SSP580, ssp580$area))
+        
+        data.frame(driver = driver, 
+                   suitable_change = ss_means,
+                   suitable_sd = ss_sds,
+                   unsuitable_change = uss_means,
+                   unsuitable_sd = uss_sds) %>% 
+            mutate(scenario = c("SSP126", "SSP370", "SSP585"))
+    })) %>% mutate(time_period = time_period)
+}) %>% bind_rows()
+
+write.csv(features_periods, "results/shap_value_change.csv", row.names = FALSE)
+
+for (ssp in c("SSP126", "SSP370", "SSP585")){
+    # Manipulate data for plotting
+    pts <- features_periods %>% 
+        filter(scenario == ssp) %>% 
+        mutate(driver = ifelse(driver == "forest", "Forest coverage",
+                               ifelse(driver == "human_impact", "Human impact",
+                                      gsub("bio", "BIO", driver)))) %>% 
+        mutate(driver = ifelse(driver == "grassland", "Grassland coverage", driver))
+    
+    drivers <- pts %>% filter(time_period == "2011-2040") %>% 
+        arrange(-suitable_change) %>% pull(driver)
+    
+    pts <- pts %>% 
+        select(driver, suitable_change, unsuitable_change, time_period) %>% 
+        pivot_longer(2:3, names_to = "type", values_to = "mean") %>% 
+        mutate(type = factor(
+            type, levels = c("suitable_change", "unsuitable_change"),
+            labels = c("Current suitable area", "Current unsuitable area"))) %>% 
+        mutate(driver = factor(driver, levels = drivers, labels = drivers)) %>% 
+        mutate(driver = as.integer(driver)) %>% 
+        left_join(
+            pts %>% 
+                select(driver, suitable_sd, unsuitable_sd, time_period) %>% 
+                pivot_longer(2:3, names_to = "type", values_to = "sd") %>% 
+                mutate(type = factor(
+                    type, levels = c("suitable_sd", "unsuitable_sd"),
+                    labels = c("Current suitable area", "Current unsuitable area"))) %>% 
+                mutate(driver = factor(driver, levels = drivers, labels = drivers)) %>% 
+                mutate(driver = as.integer(driver)),
+            by = c("driver", "time_period", "type"))
+    
+    segments_pos <- pts %>% 
+        filter(type == "Current suitable area") %>% select(-sd) %>% 
+        pivot_wider(names_from = time_period, values_from = mean) %>% 
+        mutate(range1 = `2041-2070` - `2011-2040`,
+               range2 = `2071-2100` - `2041-2070`)
+    
+    segments_pos_ins_1 <- segments_pos %>% 
+        mutate(`2041-2070` = ifelse(range1 >= -0.0006, NA, `2041-2070`)) %>% 
+        select(driver, type, `2011-2040`, `2041-2070`) %>% na.omit()
+    
+    segments_pos_ins_2 <- segments_pos %>% 
+        mutate(`2071-2100` = ifelse(range2 >= -0.0006, NA, `2071-2100`)) %>% 
+        select(driver, type, `2041-2070`, `2071-2100`) %>% na.omit()
+    
+    segments_pos_dec_1 <- segments_pos %>% 
+        mutate(`2041-2070` = ifelse(range1 <= 0.0006, NA, `2041-2070`)) %>% 
+        select(driver, type, `2011-2040`, `2041-2070`) %>% na.omit()
+    
+    segments_pos_dec_2 <- segments_pos %>% 
+        mutate(`2071-2100` = ifelse(range2 <= 0.0006, NA, `2071-2100`)) %>% 
+        select(driver, type, `2041-2070`, `2071-2100`) %>% na.omit()
+    
+    segments_neg <- pts %>% 
+        filter(type == "Current unsuitable area") %>% select(-sd) %>% 
+        pivot_wider(names_from = time_period, values_from = mean) %>% 
+        mutate(range1 = `2041-2070` - `2011-2040`,
+               range2 = `2071-2100` - `2041-2070`)
+    
+    segments_neg_ins_1 <- segments_neg %>% 
+        mutate(`2041-2070` = ifelse(range1 <= 0.0006, NA, `2041-2070`)) %>% 
+        select(driver, type, `2011-2040`, `2041-2070`) %>% na.omit()
+    
+    segments_neg_ins_2 <- segments_neg %>% 
+        mutate(`2071-2100` = ifelse(range2 <= 0.0006, NA, `2071-2100`)) %>% 
+        select(driver, type, `2041-2070`, `2071-2100`) %>% na.omit()
+    
+    segments_neg_dec_1 <- segments_neg %>% 
+        mutate(`2041-2070` = ifelse(range1 >= -0.0006, NA, `2041-2070`)) %>% 
+        select(driver, type, `2011-2040`, `2041-2070`) %>% na.omit()
+    
+    segments_neg_dec_2 <- segments_neg %>% 
+        mutate(`2071-2100` = ifelse(range2 >= -0.0006, NA, `2071-2100`)) %>% 
+        select(driver, type, `2041-2070`, `2071-2100`) %>% na.omit()
+    
+    # Plot
+    ggplot() +
+        geom_hline(yintercept = 0, color = "grey", linetype = "dashed") +
+        geom_errorbar(data = pts,
+                      aes(x = driver, ymin = mean - sd, ymax = mean + sd,
+                          color = time_period, group = time_period),
+                      width = 0, linewidth = 2.8, alpha = 0.5) +
+        geom_point(data = pts,
+                   aes(y = mean, x = driver, 
+                       group = time_period, shape = type), color ="white",
+                   size = 3.4) +
+        geom_point(data = pts,
+                   aes(y = mean, x = driver, color = time_period,
+                       group = time_period, shape = type), 
+                   size = 2.6) +
+        # add curves for suitable area
+        geom_curve(
+            data = segments_pos_ins_1,
+            aes(x = driver + 0.2, y = `2011-2040`, 
+                xend = driver + 0.21, yend = `2041-2070`, 
+                group = type), col = '#757B82', 
+            arrow = arrow(length = unit(0.01, "npc")), curvature = 0.2) +
+        geom_curve(
+            data = segments_pos_ins_2,
+            aes(x = driver + 0.2, y = `2041-2070`, 
+                xend = driver + 0.21, yend = `2071-2100`, 
+                group = type), col = '#757B82', 
+            arrow = arrow(length = unit(0.01, "npc")), curvature = 0.2) +
+        geom_curve(
+            data = segments_pos_dec_1,
+            aes(x = driver - 0.2, y = `2011-2040`, 
+                xend = driver - 0.21, yend = `2041-2070`, 
+                group = type), col = '#757B82', 
+            arrow = arrow(length = unit(0.01, "npc")), curvature = 0.2) +
+        geom_curve(
+            data = segments_pos_dec_2,
+            aes(x = driver - 0.2, y = `2041-2070`, 
+                xend = driver - 0.21, yend = `2071-2100`, 
+                group = type), col = '#757B82', 
+            arrow = arrow(length = unit(0.01, "npc")), curvature = 0.2) +
+        # add curves for unsuitable area
+        geom_curve(
+            data = segments_neg_ins_1,
+            aes(x = driver + 0.2, y = `2011-2040`, 
+                xend = driver + 0.21, yend = `2041-2070`, 
+                group = type), col = '#757B82', 
+            arrow = arrow(length = unit(0.01, "npc")), curvature = -0.2) +
+        geom_curve(
+            data = segments_neg_ins_2,
+            aes(x = driver + 0.2, y = `2041-2070`, 
+                xend = driver + 0.21, yend = `2071-2100`, 
+                group = type), col = '#757B82', 
+            arrow = arrow(length = unit(0.01, "npc")), curvature = -0.2) +
+        geom_curve(
+            data = segments_neg_dec_1,
+            aes(x = driver - 0.2, y = `2011-2040`, 
+                xend = driver - 0.21, yend = `2041-2070`, 
+                group = type), col = '#757B82', 
+            arrow = arrow(length = unit(0.01, "npc")), curvature = -0.2) +
+        geom_curve(
+            data = segments_neg_dec_2,
+            aes(x = driver - 0.2, y = `2041-2070`, 
+                xend = driver - 0.21, yend = `2071-2100`, 
+                group = type), col = '#757B82', 
+            arrow = arrow(length = unit(0.01, "npc")), curvature = -0.2) +
+        coord_flip() +
+        labs(y = "SHAP value change",
+             x = element_blank()) +
+        scale_color_brewer(name = "Time period", palette = "Dark2") +
+        scale_shape_manual(name = "", values = c(20, 18)) +
+        scale_y_continuous(expand = expansion(mult = 0.01)) +
+        scale_x_continuous(breaks = c(1:17), labels = c(drivers, "")) +
+        theme_pubclean(base_size = 10, base_family = 'Merriweather') +
+        theme(axis.text = element_text(
+            color = "black", size = 10),
+            legend.text = element_text(size = 10),
+            panel.grid.major.y = element_blank(),
+            panel.grid.minor.x = element_blank(),
+            legend.justification = c(-0.5, 0),
+            legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+            axis.title.x = element_text(vjust = -1, hjust = 0.32),
+            plot.subtitle = element_text(size = 10, vjust = -25, hjust = 2.7),
+            legend.box = 'vertical') +
+        guides(color = guide_legend("Time period"),
+               fill = guide_legend("Time period"))
+    
+    fname <- ifelse(ssp == "SSP370", "docs/figures/Figure5_magnitude_shift.png",
+                    sprintf("docs/figures/Figure_s_%s_magnitude_shift.png", ssp))
+    ggsave(fname, width = 6.5, height = 5, dpi = 500)
+}
+
+#### Spatial magnitude shifts ####
 ## Set parameters
-driver <- "bio5"
+driver <- "bio1"
+ssp <- "ssp370"
 s <- 1
 time_period <- "2011-2040"
 nm <- ifelse(driver == "forest", "Forest coverage",
              ifelse(driver == "human_impact", "Human impact",
                     gsub("bio", "BIO", driver)))
 nm <- ifelse(nm == "grassland", "Grassland", nm)
-
 sus <- ifelse(s == 1, "s", "us")
 
+# Load layers
 # Suitable area
 shap_changes <- do.call(c, lapply(time_periods, function(time_period){
     fnames <- list.files(
-        data_dir, pattern = sprintf("%s.tif", time_period), full.names = TRUE)
+        data_dir, pattern = sprintf("%s_%s.tif", ssp, time_period), 
+        full.names = TRUE)
     fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
     
     val_fnames <- fnames[str_detect(fnames, sprintf("val_change_%s", driver))]
     num_fnames <- fnames[str_detect(fnames, "num_species")]
     
-    ss <- do.call(c, lapply(1:length(val_fnames), function(i){
-        rast(val_fnames[i])[[s]] / rast(num_fnames[i])[[s + 1]]
-    })); names(ss) <- c("SSP126", "SSP370", "SSP580")
-    
-    mean(ss, na.rm = TRUE)
+    ss <- rast(val_fnames)[[s]] / rast(num_fnames)[[s + 1]]
+    names(ss) <- ssp
+    ss
 })); names(shap_changes) <- time_periods
 
 val_current <- rast("data/variables/Env/AllEnv.tif", lyrs = driver)
 val_changes <- do.call(c, lapply(time_periods, function(time_period){
-    temp_future <- c(
-        rast(sprintf("data/variables/OtherEnvMean/ssp126_%s.tif", 
-                     time_period), lyrs = driver),
-        rast(sprintf("data/variables/OtherEnvMean/ssp370_%s.tif", 
-                     time_period), lyrs = driver),
-        rast(sprintf("data/variables/OtherEnvMean/ssp585_%s.tif", 
-                     time_period), lyrs = driver))
-    (mean(temp_future, na.rm = TRUE) - val_current)
+    temp_future <- rast(
+        sprintf("data/variables/OtherEnvMean/%s_%s.tif", 
+                ssp, time_period), lyrs = driver)
+    temp_future - val_current
 })); names(val_changes) <- time_periods
 
-## Convert values to biviariates
+num_species <- do.call(c, lapply(time_periods, function(time_period){
+    rast(sprintf("results/climate_change/num_species_%s_%s_%s.tif", 
+                 driver, ssp, time_period))[[1]]
+})); names(num_species) <- time_periods
+
+## Convert values to bivariates
 ## Calculate statistics
 data <- c(cellSize(shap_changes[[time_period]], unit = "km"), 
-          val_changes[[time_period]], shap_changes[[time_period]])
+          val_changes[[time_period]], shap_changes[[time_period]],
+          num_species[[time_period]])
 data <- as.data.frame(data, xy = TRUE) %>% na.omit()
-names(data) <- c("x", "y", "area", "variable", "SHAP")
+names(data) <- c("x", "y", "area", "variable", "SHAP", "num_species")
 
 data$SHAP_br <- ifelse(data$SHAP <= 0, 1, 2)
 data$SHAP_br <- factor(data$SHAP_br, levels = c(1, 2))
@@ -1310,30 +1074,33 @@ tbl <- ggtexttable(
 
 ## Visualization
 data <- c(cellSize(shap_changes[[time_period]], unit = "km"), 
-          val_changes[[time_period]], shap_changes[[time_period]])
+          val_changes[[time_period]], shap_changes[[time_period]],
+          num_species[[time_period]])
 data <- project(data, plot_crs)
 data <- as.data.frame(data, xy = TRUE) %>% na.omit()
-names(data) <- c("x", "y", "area", "variable", "SHAP")
+names(data) <- c("x", "y", "area", "variable", "SHAP", "num_species")
+
+data <- data %>% select(x, y, area, num_species, variable, SHAP)
 
 # data <- data %>% 
 #     filter(SHAP >= quantile(SHAP, 0.01) & 
 #                SHAP <= quantile(SHAP, 0.99))
 
 if (all(data$SHAP <= 0)) {
-    data[nrow(data) + 1, ] <- c(rep(NA, 3), 1, 1)
-    data[nrow(data) + 1, ] <- c(rep(NA, 3), -1, 1)
+    data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, 1)
+    data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, 1)
 }
 if (all(data$SHAP > 0)) {
-    data[nrow(data) + 1, ] <- c(rep(NA, 3), 1, -1)
-    data[nrow(data) + 1, ] <- c(rep(NA, 2), -1, -1)
+    data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, -1)
+    data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, -1)
 }
 if (all(data$variable <= 0)) {
-    data[nrow(data) + 1, ] <- c(rep(NA, 3), 1, 1)
-    data[nrow(data) + 1, ] <- c(rep(NA, 3), 1, -1)
+    data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, 1)
+    data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, -1)
 }
 if (all(data$variable > 0)) {
-    data[nrow(data) + 1, ] <- c(rep(NA, 3), -1, 1)
-    data[nrow(data) + 1, ] <- c(rep(NA, 3), -1, -1)
+    data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, 1)
+    data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, -1)
 }
 
 data$SHAP <- ifelse(data$SHAP <= 0, 1, 2)
@@ -1342,11 +1109,61 @@ data$SHAP <- as.factor(data$SHAP)
 data$variable <- ifelse(data$variable <= 0, 1, 2)
 data$variable <- as.factor(data$variable)
 
+# species
+nums <- quantile(data$num_species, c(0.33, 0.66, 1.0), na.rm = TRUE)
+data$num_species <- ifelse(data$num_species <= nums[1], 1,
+                           ifelse(data$num_species <= nums[2], 2, 3))
+data$num_species <- as.factor(data$num_species)
+
 data_classified <- bi_class(data, x = variable, y = SHAP, dim = 2)
 breaks <- bi_class_breaks(data, x = variable, y = SHAP, 
                           dim = 2, dig_lab = 2, split = TRUE)
 breaks$bi_x <- c("Drop", "Rise")
 breaks$bi_y <- c("Drop", "Rise")
+
+leg <- biscale:::bi_pal_pull(
+    pal = "DkBlue2", dim = 2, 
+    flip_axes = FALSE, 
+    rotate_pal = FALSE)
+leg <- data.frame(
+    bi_class = names(leg),
+    bi_fill = leg)
+
+leg <- lapply(c(0.7, 0.8, 1.0), function(val){
+    leg %>% mutate(value = val) %>% mutate(group = val)
+}) %>% bind_rows() %>% 
+    mutate(group = as.factor(group)) %>% 
+    mutate(bi_class = factor(
+        bi_class, levels = c("2-2", "2-1", "1-1","1-2"),
+        labels = c("2-2", "2-1", "1-1","1-2")))
+
+pol_lgd <- ggplotGrob(
+    ggplot(leg,
+           aes(x = bi_class,
+               y = value, alpha = group,
+               fill = bi_class)) +
+        geom_col(width = 1, color = "white", linewidth = 0.2) +
+        geom_text(x = 0, y = 0, label = 0, 
+                  size = 2, family = "Merriweather") +
+        geom_text(x = 0.5, y = 1, label = round(nums[1], 0), 
+                  size = 2, family = "Merriweather") +
+        geom_text(x = 0.5, y = 1.8, label = round(nums[2], 0), 
+                  size = 2, family = "Merriweather") +
+        geom_text(x = 0.5, y = 2.5, label = round(nums[3], 0), 
+                  size = 2, family = "Merriweather") +
+        scale_alpha_manual("", values = c(1.0, 0.7, 0.4)) +
+        ggtitle("Species richness") +
+        scale_fill_manual(
+            "", values = c("#434e87", "#52b6b6", "#d3d3d3", "#ad5b9c")) +
+        coord_polar() + theme_void() +
+        theme(legend.position = "none",
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              axis.line = element_blank(),
+              plot.title = element_text(
+                  hjust = 0.5, family = "Merriweather",
+                  size = 8, margin=margin(0,0,-15,0))))
 
 lgd <- ggplotGrob(
     bi_legend(
@@ -1358,8 +1175,12 @@ lgd <- ggplotGrob(
         breaks = breaks,
         xlab = nm,
         ylab = "SHAP change",
-        pad_width = 0.5,
-        size = 10) +
+        pad_width = 0,
+        size = 10) + 
+        scale_fill_manual(values = rep("transparent", 4)) +
+        annotation_custom(grob = pol_lgd,
+                          xmin = 0.4, xmax = 2.6,
+                          ymin = 0.4, ymax = 2.6) +
         theme(axis.text = element_text(
             size = 8, color = "black", family = 'Merriweather'),
             axis.title = element_text(
@@ -1368,27 +1189,33 @@ lgd <- ggplotGrob(
             plot.background = element_rect(fill='transparent', 
                                            color = NA),
             axis.title.x = element_text(vjust = 4),
-            axis.title.y = element_text(vjust = -7.5)))
+            axis.title.y = element_text(vjust = -7.5),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            axis.line = element_blank(),
+            legend.position = "none"))
 
 # Create the bivariate map using ggplot2
 ggplot() +
     geom_sf(data = bry, fill = "transparent", 
             color = "#d3d3d3", linewidth = 0.1) + 
     geom_tile(data = data_classified, 
-              mapping = aes(x = x, y = y, fill = bi_class), 
+              mapping = aes(x = x, y = y, fill = bi_class, alpha = num_species), 
               show.legend = FALSE) +
     bi_scale_fill(
         pal = "DkBlue2", dim = 2,
         flip_axes = FALSE, rotate_pal = FALSE) +
+    scale_alpha_manual("", values = c(0.4, 0.7, 1.0)) +
     annotation_custom(grob = lgd, 
-                      xmin = -28108181, xmax = -6908181,
-                      ymin = -15342702, ymax = 5557298) +
+                      xmin = -28108181, xmax = -5908181,
+                      ymin = -17342702, ymax = 3557298) +
     annotation_custom(grob = ggplotGrob(tbl), 
                       xmin = -10108181, xmax = 18208181,
                       ymin = -13542702, ymax = 107298) +
     theme_void() + 
     theme(plot.margin = unit(c(-2.5, -0.4, -1, -0.6), "cm"))
 
-ggsave(sprintf("docs/figures/%s_%s_shap_%s.png", 
+ggsave(sprintf("docs/figures/Figure7_%s_%s_shap_%s.png", 
                sus, driver, time_period),
        width = 6, height = 3.1, dpi = 500)
