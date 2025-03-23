@@ -207,8 +207,7 @@ write.csv(features_periods, "results/affect_area.csv", row.names = FALSE)
 legend_data <- data.frame(y = c(rep(1, 3), rep(2, 3)), 
                           x = rep(1:3, 2)) %>% 
     mutate(y = factor(
-        y, levels = 1:2, labels = c("From unsuitable to suitable",
-                                    "From suitable to unsuitable")),
+        y, levels = 1:2, labels = c("N2P", "P2N")),
         x = factor(x, levels = 1:3,
                    labels = c("2011-2040", "2041-2070", "2071-2100"))) %>% 
     mutate(color = y, alpha = x)
@@ -333,7 +332,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
               axis.text.x = element_text(color = "black", size = 8),
               plot.margin = unit(c(-0.5, -1, -1, -1), "cm"))
     
-    ggarrange(ggarrange(lgd, globe, nrow = 1, widths = c(0.7, 0.3)), 
+    ggarrange(ggarrange(NA, lgd, globe, nrow = 1, widths = c(0.2, 0.7, 0.3)), 
               g, nrow = 2, heights = c(0.2, 1))
     
     fname <- ifelse(ssp == "SSP370", "docs/figures/Figure1_turnover_area.png",
@@ -542,7 +541,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
               axis.text.x = element_text(color = "black", size = 8),
               plot.margin = unit(c(-0.5, -1, -1, -1), "cm"))
     
-    ggarrange(ggarrange(lgd, globe, nrow = 1, widths = c(0.7, 0.3)), 
+    ggarrange(ggarrange(NA, lgd, globe, nrow = 1, widths = c(0.2, 0.7, 0.3)), 
               g, nrow = 2, heights = c(0.2, 1))
     
     fname <- ifelse(ssp == "SSP370", "docs/figures/Figure2_shifts_area.png",
@@ -554,14 +553,18 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
 # Set interested driver and projection for visualization
 plot_crs <- "ESRI:54030"
 
+# Here we care about grassland and bio1.
+driver_to_plot <- c("grassland", "bio1")
+
 # World boundary without antarctic
 bry <- ne_countries(scale = "large") %>%
     filter(continent != "Antarctica") %>%
     st_union() %>% st_transform(plot_crs)
 
-for (driver in features){
-    # Figure of temperature from suitable to unsuitable
-    values_periods <- lapply(time_periods, function(time_period){
+for (driver in driver_to_plot){
+    # Figure of var from suitable to unsuitable
+    # S to U
+    values_s2u <- lapply(time_periods, function(time_period){
         fnames <- list.files(
             data_dir, pattern = sprintf("%s.tif", time_period), 
             full.names = TRUE)
@@ -570,6 +573,7 @@ for (driver in features){
         dir_fnames <- fnames[str_detect(fnames, "dir_change")]
         num_fnames <- fnames[str_detect(fnames, "num_species")]
         
+        # S to U
         lyrs <- do.call(c, lapply(1:length(dir_fnames), function(i){
             project(rast(dir_fnames[i])[[3]] / rast(num_fnames[i])[[1]] * 100, 
                     plot_crs)
@@ -585,69 +589,10 @@ for (driver in features){
         
         data %>% mutate(time_period = time_period)
     })
-    values_periods <- values_periods %>% bind_rows()
+    values_s2u <- values_s2u %>% bind_rows() %>% mutate(type = "P2N")
     
-    ## Convert values to biviariates
-    values_bivi <- bi_class(
-        values_periods, x = Mean, y = SD, 
-        style = "fisher", dim = 4, dig_lab = 4)
-    breaks <- bi_class_breaks(
-        values_periods, x = Mean, y = SD, style = "fisher", 
-        dim = 4, dig_lab = 4, split = TRUE)
-    breaks$bi_x <- round(breaks$bi_x, 0)
-    breaks$bi_y <- round(breaks$bi_y, 0)
-    
-    lgd <- ggplotGrob(
-        bi_legend(pal = "PurpleOr",
-                  pad_color = "white",
-                  flip_axes = FALSE,
-                  rotate_pal = FALSE,
-                  dim = 4,
-                  xlab = "Mean (%)",
-                  ylab = "SD (%)",
-                  breaks = breaks,
-                  pad_width = 0.5,
-                  size = 10) +
-            theme(axis.text = element_text(
-                size = 8, color = "black", family = 'Merriweather'),
-                axis.title = element_text(
-                    size = 10, color = "black", family = 'Merriweather'),
-                panel.background = element_rect(fill='transparent'),
-                plot.background = element_rect(fill='transparent', color = NA),
-                axis.title.x = element_text(vjust = 3.5),
-                axis.title.y = element_text(vjust = -3)))
-    
-    gs <- lapply(time_periods, function(tp){
-        values <- values_bivi %>% filter(time_period == tp)
-        
-        # Make the figure
-        ggplot() +
-            geom_sf(data = bry, fill = "#d3d3d3", color = "#d3d3d3") + 
-            geom_tile(
-                data = values, 
-                mapping = aes(x = x, y = y, fill = bi_class), 
-                show.legend = FALSE) +
-            coord_sf(crs = plot_crs) +
-            bi_scale_fill(
-                pal = "PurpleOr", dim = 4, 
-                flip_axes = FALSE, rotate_pal = FALSE) +
-            annotation_custom(grob = lgd, 
-                              xmin = -20208181, xmax = -7808181,
-                              ymin = -10342702, ymax = 2057298) +
-            theme_void() + 
-            theme(plot.margin = unit(c(-0.2, -15, -0.2, -15), "cm"))
-    })
-    
-    ggarrange(plotlist = gs, nrow = 3, 
-              labels = c("A", "B", "C"), hjust = -2, vjust = 3,
-              font.label = list(
-                  size = 12, face = "bold", family = 'Merriweather'))
-    
-    ggsave(sprintf("docs/figures/%s_sus_mean_sd.png", driver),
-           width = 6, height = 8, dpi = 500)
-    
-    # Figure of temperature from unsuitable to suitable
-    values_periods <- lapply(time_periods, function(time_period){
+    # U to S
+    values_u2s <- lapply(time_periods, function(time_period){
         fnames <- list.files(
             data_dir, pattern = sprintf("%s.tif", time_period), 
             full.names = TRUE)
@@ -656,6 +601,7 @@ for (driver in features){
         dir_fnames <- fnames[str_detect(fnames, "dir_change")]
         num_fnames <- fnames[str_detect(fnames, "num_species")]
         
+        # U to S
         lyrs <- do.call(c, lapply(1:length(dir_fnames), function(i){
             project(rast(dir_fnames[i])[[2]] / rast(num_fnames[i])[[1]] * 100, 
                     plot_crs)
@@ -671,7 +617,9 @@ for (driver in features){
         
         data %>% mutate(time_period = time_period)
     })
-    values_periods <- values_periods %>% bind_rows()
+    values_u2s <- values_u2s %>% bind_rows() %>% mutate(type = "N2P")
+    
+    values_periods <- rbind(values_s2u, values_u2s); rm(values_s2u, values_u2s)
     
     ## Convert values to biviariates
     values_bivi <- bi_class(
@@ -697,20 +645,20 @@ for (driver in features){
             theme(axis.text = element_text(
                 size = 8, color = "black", family = 'Merriweather'),
                 axis.title = element_text(
-                    size = 10, color = "black", family = 'Merriweather'),
+                    size = 8, color = "black", family = 'Merriweather'),
                 panel.background = element_rect(fill='transparent'),
                 plot.background = element_rect(fill='transparent', color = NA),
-                axis.title.x = element_text(vjust = 3.5),
-                axis.title.y = element_text(vjust = -3)))
+                axis.title.x = element_text(margin = margin(t = -10, unit = "mm")),
+                axis.title.y = element_text(margin = margin(r = -18, unit = "mm"))))
     
-    gs <- lapply(time_periods, function(tp){
+    for (tp in time_periods){
         values <- values_bivi %>% filter(time_period == tp)
         
         # Make the figure
-        ggplot() +
+        g_p2n <- ggplot() +
             geom_sf(data = bry, fill = "#d3d3d3", color = "#d3d3d3") + 
             geom_tile(
-                data = values, 
+                data = values %>% filter(type == "P2N"), 
                 mapping = aes(x = x, y = y, fill = bi_class), 
                 show.legend = FALSE) +
             coord_sf(crs = plot_crs) +
@@ -718,19 +666,39 @@ for (driver in features){
                 pal = "PurpleOr", dim = 4, 
                 flip_axes = FALSE, rotate_pal = FALSE) +
             annotation_custom(grob = lgd, 
-                              xmin = -20208181, xmax = -7808181,
-                              ymin = -10342702, ymax = 2057298) +
+                              xmin = -17708181, xmax = -7808181,
+                              ymin = -6842702, ymax = 3057298) +
             theme_void() + 
             theme(plot.margin = unit(c(-0.2, -15, -0.2, -15), "cm"))
-    })
-    
-    ggarrange(plotlist = gs, nrow = 3, 
-              labels = c("A", "B", "C"), hjust = -2, vjust = 3,
-              font.label = list(
-                  size = 12, face = "bold", family = 'Merriweather'))
-    
-    ggsave(sprintf("docs/figures/%s_uss_mean_sd.png", driver),
-           width = 6, height = 8, dpi = 500)
+        
+        g_n2p <- ggplot() +
+            geom_sf(data = bry, fill = "#d3d3d3", color = "#d3d3d3") + 
+            geom_tile(
+                data = values %>% filter(type == "N2P"), 
+                mapping = aes(x = x, y = y, fill = bi_class), 
+                show.legend = FALSE) +
+            coord_sf(crs = plot_crs) +
+            bi_scale_fill(
+                pal = "PurpleOr", dim = 4, 
+                flip_axes = FALSE, rotate_pal = FALSE) +
+            annotation_custom(grob = lgd, 
+                              xmin = -17708181, xmax = -7808181,
+                              ymin = -6842702, ymax = 3057298) +
+            theme_void() + 
+            theme(plot.margin = unit(c(-0.2, -15, -0.2, -15), "cm"))
+        
+        ggarrange(g_p2n, g_n2p, nrow = 2, 
+                  labels = c("A", "B"), hjust = -2, vjust = 3,
+                  font.label = list(
+                      size = 11, face = "bold", family = 'Merriweather'))
+        
+        fname <- ifelse(
+            tp == "2041-2070", 
+            sprintf("docs/figures/Figure34_%s_mean_sd.png", driver),
+            sprintf("docs/figures/Figure_s_%s_%s_mean_sd.png", tp, driver))
+        
+        ggsave(fname, width = 6, height = 5, dpi = 500)
+    }
 }
 
 #### SHAP magnitude shifts ####
@@ -819,7 +787,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
         pivot_longer(2:3, names_to = "type", values_to = "mean") %>% 
         mutate(type = factor(
             type, levels = c("suitable_change", "unsuitable_change"),
-            labels = c("Current suitable area", "Current unsuitable area"))) %>% 
+            labels = c("Current favorable area", "Current unfavorable area"))) %>% 
         mutate(driver = factor(driver, levels = drivers, labels = drivers)) %>% 
         mutate(driver = as.integer(driver)) %>% 
         left_join(
@@ -828,13 +796,13 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
                 pivot_longer(2:3, names_to = "type", values_to = "sd") %>% 
                 mutate(type = factor(
                     type, levels = c("suitable_sd", "unsuitable_sd"),
-                    labels = c("Current suitable area", "Current unsuitable area"))) %>% 
+                    labels = c("Current favorable area", "Current unfavorable area"))) %>% 
                 mutate(driver = factor(driver, levels = drivers, labels = drivers)) %>% 
                 mutate(driver = as.integer(driver)),
             by = c("driver", "time_period", "type"))
     
     segments_pos <- pts %>% 
-        filter(type == "Current suitable area") %>% select(-sd) %>% 
+        filter(type == "Current favorable area") %>% select(-sd) %>% 
         pivot_wider(names_from = time_period, values_from = mean) %>% 
         mutate(range1 = `2041-2070` - `2011-2040`,
                range2 = `2071-2100` - `2041-2070`)
@@ -856,7 +824,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
         select(driver, type, `2041-2070`, `2071-2100`) %>% na.omit()
     
     segments_neg <- pts %>% 
-        filter(type == "Current unsuitable area") %>% select(-sd) %>% 
+        filter(type == "Current unfavorable area") %>% select(-sd) %>% 
         pivot_wider(names_from = time_period, values_from = mean) %>% 
         mutate(range1 = `2041-2070` - `2011-2040`,
                range2 = `2071-2100` - `2041-2070`)
@@ -972,250 +940,256 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
 ## Set parameters
 driver <- "bio1"
 ssp <- "ssp370"
-s <- 1
-time_period <- "2011-2040"
+s <- 2 # 1 or 2
 nm <- ifelse(driver == "forest", "Forest coverage",
              ifelse(driver == "human_impact", "Human impact",
                     gsub("bio", "BIO", driver)))
 nm <- ifelse(nm == "grassland", "Grassland", nm)
 sus <- ifelse(s == 1, "s", "us")
 
-# Load layers
-# Suitable area
-shap_changes <- do.call(c, lapply(time_periods, function(time_period){
-    fnames <- list.files(
-        data_dir, pattern = sprintf("%s_%s.tif", ssp, time_period), 
-        full.names = TRUE)
-    fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
+for (time_period in time_periods){
+    # Load layers
+    # Suitable area
+    shap_changes <- do.call(c, lapply(time_periods, function(time_period){
+        fnames <- list.files(
+            data_dir, pattern = sprintf("%s_%s.tif", ssp, time_period), 
+            full.names = TRUE)
+        fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
+        
+        val_fnames <- fnames[str_detect(fnames, sprintf("val_change_%s", driver))]
+        num_fnames <- fnames[str_detect(fnames, "num_species")]
+        
+        ss <- rast(val_fnames)[[s]] / rast(num_fnames)[[s + 1]]
+        names(ss) <- ssp
+        ss
+    })); names(shap_changes) <- time_periods
     
-    val_fnames <- fnames[str_detect(fnames, sprintf("val_change_%s", driver))]
-    num_fnames <- fnames[str_detect(fnames, "num_species")]
+    val_current <- rast("data/variables/Env/AllEnv.tif", lyrs = driver)
+    val_changes <- do.call(c, lapply(time_periods, function(time_period){
+        temp_future <- rast(
+            sprintf("data/variables/OtherEnvMean/%s_%s.tif", 
+                    ssp, time_period), lyrs = driver)
+        temp_future - val_current
+    })); names(val_changes) <- time_periods
     
-    ss <- rast(val_fnames)[[s]] / rast(num_fnames)[[s + 1]]
-    names(ss) <- ssp
-    ss
-})); names(shap_changes) <- time_periods
-
-val_current <- rast("data/variables/Env/AllEnv.tif", lyrs = driver)
-val_changes <- do.call(c, lapply(time_periods, function(time_period){
-    temp_future <- rast(
-        sprintf("data/variables/OtherEnvMean/%s_%s.tif", 
-                ssp, time_period), lyrs = driver)
-    temp_future - val_current
-})); names(val_changes) <- time_periods
-
-num_species <- do.call(c, lapply(time_periods, function(time_period){
-    rast(sprintf("results/climate_change/num_species_%s_%s_%s.tif", 
-                 driver, ssp, time_period))[[1]]
-})); names(num_species) <- time_periods
-
-## Convert values to bivariates
-## Calculate statistics
-data <- c(cellSize(shap_changes[[time_period]], unit = "km"), 
-          val_changes[[time_period]], shap_changes[[time_period]],
-          num_species[[time_period]])
-data <- as.data.frame(data, xy = TRUE) %>% na.omit()
-names(data) <- c("x", "y", "area", "variable", "SHAP", "num_species")
-
-data$SHAP_br <- ifelse(data$SHAP <= 0, 1, 2)
-data$SHAP_br <- factor(data$SHAP_br, levels = c(1, 2))
-data$variable_br <- ifelse(data$variable <= 0, 1, 2)
-data$variable_br <- factor(data$variable_br, levels = c(1, 2))
-data <- bi_class(data, x = variable_br, y = SHAP_br, dim = 2)
-total_area <- sum(data$area)
-statistics <- data %>% 
-    # filter(SHAP >= quantile(SHAP, 0.01) & 
-    #            SHAP <= quantile(SHAP, 0.99)) %>% 
-    dplyr::group_by(bi_class) %>% 
-    summarise(variable_sd = wtd.var(variable, area),
-              SHAP_sd = wtd.var(SHAP, area),
-              SHAP = wtd.mean(SHAP, area),
-              variable = wtd.mean(variable, area),
-              area = sum(area) / total_area * 100)
-statistics$area <- sprintf("%.2f%%", statistics$area)
-
-digit_shap <- ceiling(log10(1 / mean(abs(statistics$SHAP))))
-digit_var <- ceiling(log10(1 / mean(abs(statistics$variable))))
-
-statistics$SHAP <- sprintf(
-    "%.2f\u00B1%.2f", statistics$SHAP * 10^digit_shap, 
-    statistics$SHAP_sd * 10^digit_shap)
-statistics$variable <- sprintf(
-    "%.2f\u00B1%.2f", statistics$variable * 10^digit_var, 
-    statistics$variable_sd * 10^digit_var)
-statistics <- statistics %>% select(bi_class, variable, SHAP, area)
-
-color_table <- data.frame(
-    category = c("1-1", "2-1", "1-2", "2-2"),
-    color = c("#d3d3d3", "#52b6b6", "#ad5b9c", "#434e87"))
-
-## Build table into a nice ggtextable() to visualize it
-statistics <- as.data.frame(statistics)
-
-colors <- sapply(statistics$bi_class, function(x){
-    color_table %>% filter(category == x) %>% pull(color)
-})
-
-names(statistics) <- c(
-    "Category~(Var-SHAP)", 
-    sprintf("%s~change~(10^-%s)", nm, digit_var), 
-    sprintf("SHAP~change~(10^-%s)", digit_shap), "Area (%)")
-
-tbl <- ggtexttable(
-    statistics[, -1], rows = NULL, 
-    theme = ttheme(
-        padding = unit(c(1, 2), "mm"),
-        colnames.style = colnames_style(
-            size = 8, fill = "transparent", parse = TRUE, 
-            face = "plain", font = "Merriweather"),
-        tbody.style = tbody_style(
-            size = 8, color = "black", font = "Merriweather", 
-            fill = colors)))
-
-## Visualization
-data <- c(cellSize(shap_changes[[time_period]], unit = "km"), 
-          val_changes[[time_period]], shap_changes[[time_period]],
-          num_species[[time_period]])
-data <- project(data, plot_crs)
-data <- as.data.frame(data, xy = TRUE) %>% na.omit()
-names(data) <- c("x", "y", "area", "variable", "SHAP", "num_species")
-
-data <- data %>% select(x, y, area, num_species, variable, SHAP)
-
-# data <- data %>% 
-#     filter(SHAP >= quantile(SHAP, 0.01) & 
-#                SHAP <= quantile(SHAP, 0.99))
-
-if (all(data$SHAP <= 0)) {
-    data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, 1)
-    data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, 1)
-}
-if (all(data$SHAP > 0)) {
-    data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, -1)
-    data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, -1)
-}
-if (all(data$variable <= 0)) {
-    data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, 1)
-    data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, -1)
-}
-if (all(data$variable > 0)) {
-    data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, 1)
-    data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, -1)
-}
-
-data$SHAP <- ifelse(data$SHAP <= 0, 1, 2)
-data$SHAP <- as.factor(data$SHAP)
-
-data$variable <- ifelse(data$variable <= 0, 1, 2)
-data$variable <- as.factor(data$variable)
-
-# species
-nums <- quantile(data$num_species, c(0.33, 0.66, 1.0), na.rm = TRUE)
-data$num_species <- ifelse(data$num_species <= nums[1], 1,
-                           ifelse(data$num_species <= nums[2], 2, 3))
-data$num_species <- as.factor(data$num_species)
-
-data_classified <- bi_class(data, x = variable, y = SHAP, dim = 2)
-breaks <- bi_class_breaks(data, x = variable, y = SHAP, 
-                          dim = 2, dig_lab = 2, split = TRUE)
-breaks$bi_x <- c("Drop", "Rise")
-breaks$bi_y <- c("Drop", "Rise")
-
-leg <- biscale:::bi_pal_pull(
-    pal = "DkBlue2", dim = 2, 
-    flip_axes = FALSE, 
-    rotate_pal = FALSE)
-leg <- data.frame(
-    bi_class = names(leg),
-    bi_fill = leg)
-
-leg <- lapply(c(0.7, 0.8, 1.0), function(val){
-    leg %>% mutate(value = val) %>% mutate(group = val)
-}) %>% bind_rows() %>% 
-    mutate(group = as.factor(group)) %>% 
-    mutate(bi_class = factor(
-        bi_class, levels = c("2-2", "2-1", "1-1","1-2"),
-        labels = c("2-2", "2-1", "1-1","1-2")))
-
-pol_lgd <- ggplotGrob(
-    ggplot(leg,
-           aes(x = bi_class,
-               y = value, alpha = group,
-               fill = bi_class)) +
-        geom_col(width = 1, color = "white", linewidth = 0.2) +
-        geom_text(x = 0, y = 0, label = 0, 
-                  size = 2, family = "Merriweather") +
-        geom_text(x = 0.5, y = 1, label = round(nums[1], 0), 
-                  size = 2, family = "Merriweather") +
-        geom_text(x = 0.5, y = 1.8, label = round(nums[2], 0), 
-                  size = 2, family = "Merriweather") +
-        geom_text(x = 0.5, y = 2.5, label = round(nums[3], 0), 
-                  size = 2, family = "Merriweather") +
-        scale_alpha_manual("", values = c(1.0, 0.7, 0.4)) +
-        ggtitle("Species richness") +
-        scale_fill_manual(
-            "", values = c("#434e87", "#52b6b6", "#d3d3d3", "#ad5b9c")) +
-        coord_polar() + theme_void() +
-        theme(legend.position = "none",
-              panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank(),
-              panel.border = element_blank(),
-              axis.line = element_blank(),
-              plot.title = element_text(
-                  hjust = 0.5, family = "Merriweather",
-                  size = 8, margin=margin(0,0,-15,0))))
-
-lgd <- ggplotGrob(
-    bi_legend(
-        pal = "DkBlue2",
-        pad_color = "white",
-        flip_axes = FALSE,
-        rotate_pal = FALSE,
-        dim = 2,
-        breaks = breaks,
-        xlab = nm,
-        ylab = "SHAP change",
-        pad_width = 0,
-        size = 10) + 
-        scale_fill_manual(values = rep("transparent", 4)) +
-        annotation_custom(grob = pol_lgd,
-                          xmin = 0.4, xmax = 2.6,
-                          ymin = 0.4, ymax = 2.6) +
-        theme(axis.text = element_text(
-            size = 8, color = "black", family = 'Merriweather'),
-            axis.title = element_text(
+    num_species <- do.call(c, lapply(time_periods, function(time_period){
+        rast(sprintf("results/climate_change/num_species_%s_%s_%s.tif", 
+                     driver, ssp, time_period))[[1]]
+    })); names(num_species) <- time_periods
+    
+    ## Convert values to bivariates
+    ## Calculate statistics
+    data <- c(cellSize(shap_changes[[time_period]], unit = "km"), 
+              val_changes[[time_period]], shap_changes[[time_period]],
+              num_species[[time_period]])
+    data <- as.data.frame(data, xy = TRUE) %>% na.omit()
+    names(data) <- c("x", "y", "area", "variable", "SHAP", "num_species")
+    
+    data$SHAP_br <- ifelse(data$SHAP <= 0, 1, 2)
+    data$SHAP_br <- factor(data$SHAP_br, levels = c(1, 2))
+    data$variable_br <- ifelse(data$variable <= 0, 1, 2)
+    data$variable_br <- factor(data$variable_br, levels = c(1, 2))
+    data <- bi_class(data, x = variable_br, y = SHAP_br, dim = 2)
+    total_area <- sum(data$area)
+    statistics <- data %>% 
+        # filter(SHAP >= quantile(SHAP, 0.01) & 
+        #            SHAP <= quantile(SHAP, 0.99)) %>% 
+        dplyr::group_by(bi_class) %>% 
+        summarise(variable_sd = wtd.var(variable, area),
+                  SHAP_sd = wtd.var(SHAP, area),
+                  SHAP = wtd.mean(SHAP, area),
+                  variable = wtd.mean(variable, area),
+                  area = sum(area) / total_area * 100)
+    statistics$area <- sprintf("%.2f%%", statistics$area)
+    
+    digit_shap <- ceiling(log10(1 / mean(abs(statistics$SHAP))))
+    digit_var <- ceiling(log10(1 / mean(abs(statistics$variable))))
+    
+    statistics$SHAP <- sprintf(
+        "%.2f\u00B1%.2f", statistics$SHAP * 10^digit_shap, 
+        statistics$SHAP_sd * 10^digit_shap)
+    statistics$variable <- sprintf(
+        "%.2f\u00B1%.2f", statistics$variable * 10^digit_var, 
+        statistics$variable_sd * 10^digit_var)
+    statistics <- statistics %>% select(bi_class, variable, SHAP, area)
+    
+    color_table <- data.frame(
+        category = c("1-1", "2-1", "1-2", "2-2"),
+        color = c("#d3d3d3", "#52b6b6", "#ad5b9c", "#434e87"))
+    
+    ## Build table into a nice ggtextable() to visualize it
+    statistics <- as.data.frame(statistics)
+    
+    colors <- sapply(statistics$bi_class, function(x){
+        color_table %>% filter(category == x) %>% pull(color)
+    })
+    
+    names(statistics) <- c(
+        "Category~(Var-SHAP)", 
+        sprintf("%s~change~(10^-%s)", nm, digit_var), 
+        sprintf("SHAP~change~(10^-%s)", digit_shap), "Area (%)")
+    
+    tbl <- ggtexttable(
+        statistics[, -1], rows = NULL, 
+        theme = ttheme(
+            padding = unit(c(1, 2), "mm"),
+            colnames.style = colnames_style(
+                size = 8, fill = "transparent", parse = TRUE, 
+                face = "plain", font = "Merriweather"),
+            tbody.style = tbody_style(
+                size = 8, color = "black", font = "Merriweather", 
+                fill = colors)))
+    
+    ## Visualization
+    data <- c(cellSize(shap_changes[[time_period]], unit = "km"), 
+              val_changes[[time_period]], shap_changes[[time_period]],
+              num_species[[time_period]])
+    data <- project(data, plot_crs)
+    data <- as.data.frame(data, xy = TRUE) %>% na.omit()
+    names(data) <- c("x", "y", "area", "variable", "SHAP", "num_species")
+    
+    data <- data %>% select(x, y, area, num_species, variable, SHAP)
+    
+    # data <- data %>% 
+    #     filter(SHAP >= quantile(SHAP, 0.01) & 
+    #                SHAP <= quantile(SHAP, 0.99))
+    
+    if (all(data$SHAP <= 0)) {
+        data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, 1)
+        data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, 1)
+    }
+    if (all(data$SHAP > 0)) {
+        data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, -1)
+        data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, -1)
+    }
+    if (all(data$variable <= 0)) {
+        data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, 1)
+        data[nrow(data) + 1, ] <- c(rep(NA, 4), 1, -1)
+    }
+    if (all(data$variable > 0)) {
+        data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, 1)
+        data[nrow(data) + 1, ] <- c(rep(NA, 4), -1, -1)
+    }
+    
+    data$SHAP <- ifelse(data$SHAP <= 0, 1, 2)
+    data$SHAP <- as.factor(data$SHAP)
+    
+    data$variable <- ifelse(data$variable <= 0, 1, 2)
+    data$variable <- as.factor(data$variable)
+    
+    # species
+    nums <- quantile(data$num_species, c(0.33, 0.66, 1.0), na.rm = TRUE)
+    data$num_species <- ifelse(data$num_species <= nums[1], 1,
+                               ifelse(data$num_species <= nums[2], 2, 3))
+    data$num_species <- as.factor(data$num_species)
+    
+    data_classified <- bi_class(data, x = variable, y = SHAP, dim = 2)
+    breaks <- bi_class_breaks(data, x = variable, y = SHAP, 
+                              dim = 2, dig_lab = 2, split = TRUE)
+    breaks$bi_x <- c("Drop", "Rise")
+    breaks$bi_y <- c("Drop", "Rise")
+    
+    leg <- biscale:::bi_pal_pull(
+        pal = "DkBlue2", dim = 2, 
+        flip_axes = FALSE, 
+        rotate_pal = FALSE)
+    leg <- data.frame(
+        bi_class = names(leg),
+        bi_fill = leg)
+    
+    leg <- lapply(c(0.7, 0.8, 1.0), function(val){
+        leg %>% mutate(value = val) %>% mutate(group = val)
+    }) %>% bind_rows() %>% 
+        mutate(group = as.factor(group)) %>% 
+        mutate(bi_class = factor(
+            bi_class, levels = c("2-2", "2-1", "1-1","1-2"),
+            labels = c("2-2", "2-1", "1-1","1-2")))
+    
+    pol_lgd <- ggplotGrob(
+        ggplot(leg,
+               aes(x = bi_class,
+                   y = value, alpha = group,
+                   fill = bi_class)) +
+            geom_col(width = 1, color = "white", linewidth = 0.2) +
+            geom_text(x = 0, y = 0, label = 0, 
+                      size = 2, family = "Merriweather") +
+            geom_text(x = 0.5, y = 1, label = round(nums[1], 0), 
+                      size = 2, family = "Merriweather") +
+            geom_text(x = 0.5, y = 1.8, label = round(nums[2], 0), 
+                      size = 2, family = "Merriweather") +
+            geom_text(x = 0.5, y = 2.5, label = round(nums[3], 0), 
+                      size = 2, family = "Merriweather") +
+            scale_alpha_manual("", values = c(1.0, 0.7, 0.4)) +
+            ggtitle("Species richness") +
+            scale_fill_manual(
+                "", values = c("#434e87", "#52b6b6", "#d3d3d3", "#ad5b9c")) +
+            coord_polar() + theme_void() +
+            theme(legend.position = "none",
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.border = element_blank(),
+                  axis.line = element_blank(),
+                  plot.title = element_text(
+                      hjust = 0.5, family = "Merriweather",
+                      size = 8, margin = margin(0, 0, -2, 0))))
+    
+    lgd <- ggplotGrob(
+        bi_legend(
+            pal = "DkBlue2",
+            pad_color = "white",
+            flip_axes = FALSE,
+            rotate_pal = FALSE,
+            dim = 2,
+            breaks = breaks,
+            xlab = nm,
+            ylab = "SHAP change",
+            pad_width = 0,
+            size = 10) + 
+            scale_fill_manual(values = rep("transparent", 4)) +
+            annotation_custom(grob = pol_lgd,
+                              xmin = 0.4, xmax = 2.6,
+                              ymin = 0.4, ymax = 2.6) +
+            theme(axis.text = element_text(
                 size = 8, color = "black", family = 'Merriweather'),
-            panel.background = element_rect(fill='transparent'),
-            plot.background = element_rect(fill='transparent', 
-                                           color = NA),
-            axis.title.x = element_text(vjust = 4),
-            axis.title.y = element_text(vjust = -7.5),
-            panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank(),
-            panel.border = element_blank(),
-            axis.line = element_blank(),
-            legend.position = "none"))
-
-# Create the bivariate map using ggplot2
-ggplot() +
-    geom_sf(data = bry, fill = "transparent", 
-            color = "#d3d3d3", linewidth = 0.1) + 
-    geom_tile(data = data_classified, 
-              mapping = aes(x = x, y = y, fill = bi_class, alpha = num_species), 
-              show.legend = FALSE) +
-    bi_scale_fill(
-        pal = "DkBlue2", dim = 2,
-        flip_axes = FALSE, rotate_pal = FALSE) +
-    scale_alpha_manual("", values = c(0.4, 0.7, 1.0)) +
-    annotation_custom(grob = lgd, 
-                      xmin = -28108181, xmax = -5908181,
-                      ymin = -17342702, ymax = 3557298) +
-    annotation_custom(grob = ggplotGrob(tbl), 
-                      xmin = -10108181, xmax = 18208181,
-                      ymin = -13542702, ymax = 107298) +
-    theme_void() + 
-    theme(plot.margin = unit(c(-2.5, -0.4, -1, -0.6), "cm"))
-
-ggsave(sprintf("docs/figures/Figure7_%s_%s_shap_%s.png", 
-               sus, driver, time_period),
-       width = 6, height = 3.1, dpi = 500)
+                axis.title = element_text(
+                    size = 8, color = "black", family = 'Merriweather'),
+                panel.background = element_rect(fill='transparent'),
+                plot.background = element_rect(fill='transparent', 
+                                               color = NA),
+                axis.title.x = element_text(margin = margin(t = -10, unit = "mm")),
+                axis.title.y = element_text(margin = margin(r = -40, unit = "mm")),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                panel.border = element_blank(),
+                axis.line = element_blank(),
+                legend.position = "none"))
+    
+    # Create the bivariate map using ggplot2
+    ggplot() +
+        geom_sf(data = bry, fill = "transparent", 
+                color = "#d3d3d3", linewidth = 0.1) + 
+        geom_tile(data = data_classified, 
+                  mapping = aes(x = x, y = y, fill = bi_class, alpha = num_species), 
+                  show.legend = FALSE) +
+        bi_scale_fill(
+            pal = "DkBlue2", dim = 2,
+            flip_axes = FALSE, rotate_pal = FALSE) +
+        scale_alpha_manual("", values = c(0.4, 0.7, 1.0)) +
+        annotation_custom(grob = lgd, 
+                          xmin = -18108181, xmax = -5908181,
+                          ymin = -10142702, ymax = 1557298) +
+        annotation_custom(grob = ggplotGrob(tbl), 
+                          xmin = -10108181, xmax = 18208181,
+                          ymin = -13542702, ymax = 107298) +
+        theme_void() + 
+        theme(plot.margin = unit(c(-2.5, -0.4, -1, -0.6), "cm"))
+    
+    name <- ifelse(
+        time_period == "2041-2070", 
+        sprintf("docs/figures/Figure67_%s_%s_shap_%s.png", 
+                sus, driver, time_period),
+        sprintf("docs/figures/Figure_s_%s_%s_shap_%s.png", 
+                sus, driver, time_period))
+    
+    ggsave(name, width = 6, height = 3.1, dpi = 500)
+}
