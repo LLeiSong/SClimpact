@@ -56,8 +56,26 @@ evals <- evals %>%
 
 write.csv(evals, "results/model_evaluation.csv", row.names = FALSE)
 
-ggplot(data = evals %>% filter(type == "testing"), 
-       aes(x = value, after_stat(density), fill = metric.eval)) +
+smr_evals <- evals %>% filter(type == "testing") %>% 
+    group_by(metric.eval) %>% 
+    summarise(mean = mean(value), sd = sd(value)) %>% 
+    ungroup() %>% mutate(value = sprintf("%.2f\u00B1%.2f", mean, sd)) %>% 
+    arrange(-mean) %>% 
+    select(metric.eval, value)
+colnames(smr_evals) <- NULL
+
+tbl <- ggplotGrob(ggtexttable(
+    smr_evals, rows = NULL, 
+    theme = ttheme(
+        padding = unit(c(1, 2), "mm"),
+        colnames.style = colnames_style(
+            size = 8, fill = "transparent", parse = TRUE, 
+            face = "plain", font = "Merriweather"),
+        tbody.style = tbody_style(
+            size = 8, color = "black", font = "Merriweather"))))
+
+g <- ggplot(data = evals %>% filter(type == "testing"), 
+            aes(x = value, after_stat(density), fill = metric.eval)) +
     geom_density(alpha = 0.8) +
     xlab("Metric value(0 - 1)") +
     ylab("Density") +
@@ -65,8 +83,10 @@ ggplot(data = evals %>% filter(type == "testing"),
     theme_pubclean(base_size = 11, base_family = "Merriweather") +
     theme(axis.text = element_text(color = "black", family = 'Merriweather'))
 
+ggarrange(g, tbl, nrow = 1, widths = c(0.7, 0.3))
+
 ggsave("docs/figures/Figure_s4_model_eval.png",
-       width = 4, height = 3, dpi = 500)
+       width = 5, height = 3, dpi = 500)
 
 #### Variable selection ####
 # Subset the species
@@ -86,7 +106,7 @@ for (sp in species_list) {
 
 vars <- vars %>% mutate(ratio = num / length(species_list)) %>% 
     mutate(var = ifelse(var == "forest", "Forest coverage",
-                        ifelse(var == "human_impact", "Human impact",
+                        ifelse(var == "human_impact", "Human land use",
                                gsub("bio", "BIO", var)))) %>% 
     mutate(var = ifelse(var == "grassland", "Grassland", var)) %>% 
     mutate(selected = ifelse(ratio > 0.1, "yes", "no")) %>% 
@@ -203,6 +223,26 @@ features_periods <- lapply(time_periods, function(time_period){
 
 write.csv(features_periods, "results/affect_area.csv", row.names = FALSE)
 
+# Across variable groups: temperature, precipitation and land cover
+tbl_vals <- features_periods %>% 
+    mutate(group = as.integer(str_extract(driver, "[0-9]+"))) %>% 
+    mutate(group = ifelse(is.na(group), "Landcover", 
+                          ifelse (group < 12, "Temperature", 
+                                  "Precipitation"))) %>% 
+    group_by(scenario, time_period, group) %>% 
+    summarise(stou_sd = sd(stou_percent), 
+              stou_percent = mean(stou_percent),
+              utos_sd = sd(utos_percent),
+              utos_percent = mean(utos_percent)) %>% 
+    mutate(P2N = sprintf("%.1f\u00B1%.1f", stou_percent, stou_sd),
+           N2P = sprintf("%.1f\u00B1%.1f", utos_percent, utos_sd)) %>% 
+    select(scenario, time_period, group, P2N, N2P) %>% 
+    arrange(time_period) %>% 
+    pivot_wider(names_from = c(scenario, time_period), values_from = c(P2N, N2P))
+
+write.csv(tbl_vals, "results/affect_area_groups.csv", 
+          row.names = FALSE, fileEncoding = "UTF-16LE")
+
 # Make a delicate legend
 legend_data <- data.frame(y = c(rep(1, 3), rep(2, 3)), 
                           x = rep(1:3, 2)) %>% 
@@ -254,7 +294,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
         filter(scenario == ssp) %>% 
         mutate(driver = ifelse(
             driver == "forest", "Forest\ncoverage",
-            ifelse(driver == "human_impact", "Human\nimpact",
+            ifelse(driver == "human_impact", "Human\nland use",
                    gsub("bio", "BIO", driver)))) %>% 
         mutate(driver = ifelse(driver == "grassland", "Grassland\ncoverage", driver))
     
@@ -403,6 +443,26 @@ features_periods <- lapply(time_periods, function(time_period){
 
 write.csv(features_periods, "results/affect_species.csv", row.names = FALSE)
 
+# Across variable groups: temperature, precipitation and land cover
+tbl_vals <- features_periods %>% 
+    mutate(group = as.integer(str_extract(driver, "[0-9]+"))) %>% 
+    mutate(group = ifelse(is.na(group), "Landcover", 
+                          ifelse (group < 12, "Temperature", 
+                                  "Precipitation"))) %>% 
+    group_by(scenario, time_period, group) %>% 
+    summarise(stou_sd = sd(stou_sp_mean), 
+              stou_percent = mean(stou_sp_mean),
+              utos_sd = sd(utos_sp_mean),
+              utos_percent = mean(utos_sp_mean)) %>% 
+    mutate(P2N = sprintf("%.1f\u00B1%.1f", stou_percent, stou_sd),
+           N2P = sprintf("%.1f\u00B1%.1f", utos_percent, utos_sd)) %>% 
+    select(scenario, time_period, group, P2N, N2P) %>% 
+    arrange(time_period) %>% 
+    pivot_wider(names_from = c(scenario, time_period), values_from = c(P2N, N2P))
+
+write.csv(tbl_vals, "results/affect_species_groups.csv",
+          row.names = FALSE, fileEncoding = "UTF-16LE")
+
 pseudo_ratio <- st_make_grid(range_exp, square = TRUE, cellsize = 3) %>% 
     st_as_sf() %>% slice(unique(unlist(st_intersects(range_exp, .)))) %>% 
     mutate(ratio = runif(n = nrow(.), min = 0, max = 1))
@@ -429,7 +489,7 @@ globe <- ggplot() +
 pts_all <- features_periods %>% 
     mutate(driver = ifelse(
         driver == "forest", "Forest\ncoverage",
-        ifelse(driver == "human_impact", "Human\nimpact",
+        ifelse(driver == "human_impact", "Human\nland use",
                gsub("bio", "BIO", driver)))) %>% 
     mutate(driver = ifelse(driver == "grassland", "Grassland\ncoverage", driver))
 
@@ -550,6 +610,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
 }
 
 #### Spatial turnover of individual variable ####
+##### Interested variable ####
 # Set interested driver and projection for visualization
 plot_crs <- "ESRI:54030"
 
@@ -701,6 +762,233 @@ for (driver in driver_to_plot){
     }
 }
 
+##### All variable ####
+for (driver in features){
+    # Figure of var from suitable to unsuitable
+    # S to U
+    values_s2u <- lapply(time_periods, function(time_period){
+        fnames <- list.files(
+            data_dir, pattern = sprintf("%s.tif", time_period), 
+            full.names = TRUE)
+        fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
+        
+        dir_fnames <- fnames[str_detect(fnames, "dir_change")]
+        num_fnames <- fnames[str_detect(fnames, "num_species")]
+        
+        # S to U
+        lyrs <- do.call(c, lapply(1:length(dir_fnames), function(i){
+            project(rast(dir_fnames[i])[[3]] / rast(num_fnames[i])[[1]] * 100, 
+                    plot_crs) %>% aggregate(fact = 2)
+        })); names(lyrs) <- c("SSP126", "SSP370", "SSP580")
+        lyrs <- trim(lyrs)
+        
+        means <- mean(lyrs, na.rm = TRUE)
+        sds <- stdev(lyrs, na.rm = TRUE, pop = TRUE)
+        
+        # Put values into data.frame
+        data <- as.data.frame(c(means, sds), xy = TRUE)
+        names(data) <- c("x", "y", "Mean", "SD")
+        
+        data %>% mutate(time_period = time_period)
+    })
+    values_s2u <- values_s2u %>% bind_rows() %>% mutate(type = "P2N")
+    
+    # U to S
+    values_u2s <- lapply(time_periods, function(time_period){
+        fnames <- list.files(
+            data_dir, pattern = sprintf("%s.tif", time_period), 
+            full.names = TRUE)
+        fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
+        
+        dir_fnames <- fnames[str_detect(fnames, "dir_change")]
+        num_fnames <- fnames[str_detect(fnames, "num_species")]
+        
+        # U to S
+        lyrs <- do.call(c, lapply(1:length(dir_fnames), function(i){
+            project(rast(dir_fnames[i])[[2]] / rast(num_fnames[i])[[1]] * 100, 
+                    plot_crs)%>% aggregate(fact = 2)
+        })); names(lyrs) <- c("SSP126", "SSP370", "SSP580")
+        lyrs <- trim(lyrs)
+        
+        means <- mean(lyrs, na.rm = TRUE)
+        sds <- stdev(lyrs, na.rm = TRUE, pop = TRUE)
+        
+        # Put values into data.frame
+        data <- as.data.frame(c(means, sds), xy = TRUE)
+        names(data) <- c("x", "y", "Mean", "SD")
+        
+        data %>% mutate(time_period = time_period)
+    })
+    values_u2s <- values_u2s %>% bind_rows() %>% mutate(type = "N2P")
+    
+    values_periods <- rbind(values_s2u, values_u2s); rm(values_s2u, values_u2s)
+    
+    ## Convert values to biviariates
+    values_bivi <- bi_class(
+        values_periods, x = Mean, y = SD, 
+        style = "fisher", dim = 4, dig_lab = 4)
+    breaks <- bi_class_breaks(
+        values_periods, x = Mean, y = SD, style = "fisher", 
+        dim = 4, dig_lab = 4, split = TRUE)
+    breaks$bi_x <- round(breaks$bi_x, 0)
+    breaks$bi_y <- round(breaks$bi_y, 0)
+    
+    lgd <- ggplotGrob(
+        bi_legend(
+            pal = "PurpleOr",
+            pad_color = "white",
+            flip_axes = FALSE,
+            rotate_pal = FALSE,
+            dim = 4,
+            xlab = "Mean (%)",
+            ylab = "SD (%)",
+            breaks = breaks,
+            pad_width = 0.2,
+            size = 6) +
+            theme(axis.text = element_text(
+                size = 6, color = "black", family = 'Merriweather'),
+                axis.title = element_text(
+                    size = 6, color = "black", family = 'Merriweather'),
+                panel.background = element_rect(fill='transparent'),
+                plot.background = element_rect(fill='transparent', color = NA),
+                axis.title.x = element_text(margin = margin(t = -25, unit = "mm")),
+                axis.title.y = element_text(margin = margin(r = -24, unit = "mm")),
+                axis.text.x = element_text(angle = -45, vjust = 0.5, hjust = 0),
+                axis.text.y = element_text(angle = 45)))
+    
+    if (driver == "forest"){
+        label <- "Forest\ncoverage"   
+    }else if(driver == "human_impact"){
+        label <- "Human\nland use"
+    }else if(driver == "grassland"){
+        label <- "Grassland\ncoverage"
+    } else{
+        label <- gsub("bio", "BIO", driver)
+    }
+    
+    for (tp in time_periods){
+        values <- values_bivi %>% filter(time_period == tp)
+        
+        # Make the figure
+        tgrob <- text_grob(label, size = 8, family = 'Merriweather')
+        plot_0 <- as_ggplot(tgrob) + 
+            theme(plot.margin = margin(0, -19, 3, -18, "cm"))
+        
+        g_p2n <- ggplot() +
+            geom_sf(data = bry, fill = "#d3d3d3", color = "#d3d3d3") + 
+            geom_tile(
+                data = values %>% filter(type == "P2N"), 
+                mapping = aes(x = x, y = y, fill = bi_class), 
+                show.legend = FALSE) +
+            coord_sf(crs = plot_crs) +
+            bi_scale_fill(
+                pal = "PurpleOr", dim = 4, 
+                flip_axes = FALSE, rotate_pal = FALSE) +
+            annotation_custom(grob = lgd, 
+                              xmin = -20708181, xmax = -6008181,
+                              ymin = -11142702, ymax = 3557298) +
+            theme_void() +
+            theme(plot.margin = unit(c(-0.4, 0, -0.4, 0), "cm"))
+        
+        g_n2p <- ggplot() +
+            geom_sf(data = bry, fill = "#d3d3d3", color = "#d3d3d3") + 
+            geom_tile(
+                data = values %>% filter(type == "N2P"), 
+                mapping = aes(x = x, y = y, fill = bi_class), 
+                show.legend = FALSE) +
+            coord_sf(crs = plot_crs) +
+            bi_scale_fill(
+                pal = "PurpleOr", dim = 4, 
+                flip_axes = FALSE, rotate_pal = FALSE) +
+            theme_void() +
+            theme(plot.margin = unit(c(-0.4, 0, -0.4, 0), "cm"))
+        
+        ggarrange(plot_0, g_p2n, g_n2p, nrow = 1, 
+                  widths = c(0.5, 8, 8), 
+                  labels = c("", "P2N", "N2P"), 
+                  hjust = -7,
+                  font.label = list(
+                      size = 8, family = 'Merriweather'))
+        
+        fname <- sprintf("docs/figures/Figure_s_%s_mean_sd_%s.png", driver, tp)
+        
+        ggsave(fname, width = 6.5, height = 1.6, dpi = 500)
+    }
+}
+
+## Correlation table
+cors <- lapply(features, function(driver){
+    # Figure of var from suitable to unsuitable
+    # S to U
+    values_s2u <- lapply(time_periods, function(time_period){
+        fnames <- list.files(
+            data_dir, pattern = sprintf("%s.tif", time_period), 
+            full.names = TRUE)
+        fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
+        
+        dir_fnames <- fnames[str_detect(fnames, "dir_change")]
+        num_fnames <- fnames[str_detect(fnames, "num_species")]
+        
+        # S to U
+        lyrs <- do.call(c, lapply(1:length(dir_fnames), function(i){
+            project(rast(dir_fnames[i])[[3]] / rast(num_fnames[i])[[1]] * 100, 
+                    plot_crs) %>% aggregate(fact = 2)
+        })); names(lyrs) <- c("SSP126", "SSP370", "SSP580")
+        lyrs <- trim(lyrs)
+        
+        means <- mean(lyrs, na.rm = TRUE)
+        sds <- stdev(lyrs, na.rm = TRUE, pop = TRUE)
+        
+        # Put values into data.frame
+        data <- as.data.frame(c(means, sds), xy = TRUE)
+        names(data) <- c("x", "y", "Mean", "SD")
+        
+        data %>% mutate(time_period = time_period)
+    }) %>% bind_rows()
+    
+    # U to S
+    values_u2s <- lapply(time_periods, function(time_period){
+        fnames <- list.files(
+            data_dir, pattern = sprintf("%s.tif", time_period), 
+            full.names = TRUE)
+        fnames <- fnames[str_detect(fnames, sprintf("_%s_", driver))]
+        
+        dir_fnames <- fnames[str_detect(fnames, "dir_change")]
+        num_fnames <- fnames[str_detect(fnames, "num_species")]
+        
+        # U to S
+        lyrs <- do.call(c, lapply(1:length(dir_fnames), function(i){
+            project(rast(dir_fnames[i])[[2]] / rast(num_fnames[i])[[1]] * 100, 
+                    plot_crs)%>% aggregate(fact = 2)
+        })); names(lyrs) <- c("SSP126", "SSP370", "SSP580")
+        lyrs <- trim(lyrs)
+        
+        means <- mean(lyrs, na.rm = TRUE)
+        sds <- stdev(lyrs, na.rm = TRUE, pop = TRUE)
+        
+        # Put values into data.frame
+        data <- as.data.frame(c(means, sds), xy = TRUE)
+        names(data) <- c("x", "y", "Mean", "SD")
+        
+        data %>% mutate(time_period = time_period)
+    }) %>% bind_rows()
+    
+    values_periods <- left_join(values_s2u, values_u2s, 
+                                by = c("x", "y", "time_period"), suffix = c(".P2N", ".N2P"))
+    rm(values_s2u, values_u2s)
+    
+    values_periods %>% group_by(time_period) %>% 
+        summarise(cor = cor(Mean.P2N, Mean.N2P, method = "spearman")) %>% 
+        mutate(feature = driver)
+}) %>% bind_rows()
+
+cors <- cors %>% 
+    mutate(group = as.integer(str_extract(feature, "[0-9]+"))) %>% 
+    mutate(group = ifelse(is.na(group), "Landcover", 
+                          ifelse (group < 12, "Temperature", 
+                                  "Precipitation"))) 
+write.csv(cors, "results/cors_p2n_n2p.csv", row.names = FALSE)
+
 #### SHAP magnitude shifts ####
 features_periods <- lapply(time_periods, function(time_period){
     do.call(rbind, lapply(features, function(driver){
@@ -775,7 +1063,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
     pts <- features_periods %>% 
         filter(scenario == ssp) %>% 
         mutate(driver = ifelse(driver == "forest", "Forest coverage",
-                               ifelse(driver == "human_impact", "Human impact",
+                               ifelse(driver == "human_impact", "Human land use",
                                       gsub("bio", "BIO", driver)))) %>% 
         mutate(driver = ifelse(driver == "grassland", "Grassland coverage", driver))
     
@@ -787,7 +1075,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
         pivot_longer(2:3, names_to = "type", values_to = "mean") %>% 
         mutate(type = factor(
             type, levels = c("suitable_change", "unsuitable_change"),
-            labels = c("Current favorable area", "Current unfavorable area"))) %>% 
+            labels = c("Baseline-favorable area", "Baseline-unfavorable area"))) %>% 
         mutate(driver = factor(driver, levels = drivers, labels = drivers)) %>% 
         mutate(driver = as.integer(driver)) %>% 
         left_join(
@@ -796,13 +1084,13 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
                 pivot_longer(2:3, names_to = "type", values_to = "sd") %>% 
                 mutate(type = factor(
                     type, levels = c("suitable_sd", "unsuitable_sd"),
-                    labels = c("Current favorable area", "Current unfavorable area"))) %>% 
+                    labels = c("Baseline-favorable area", "Baseline-unfavorable area"))) %>% 
                 mutate(driver = factor(driver, levels = drivers, labels = drivers)) %>% 
                 mutate(driver = as.integer(driver)),
             by = c("driver", "time_period", "type"))
     
     segments_pos <- pts %>% 
-        filter(type == "Current favorable area") %>% select(-sd) %>% 
+        filter(type == "Baseline-favorable area") %>% select(-sd) %>% 
         pivot_wider(names_from = time_period, values_from = mean) %>% 
         mutate(range1 = `2041-2070` - `2011-2040`,
                range2 = `2071-2100` - `2041-2070`)
@@ -824,7 +1112,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
         select(driver, type, `2041-2070`, `2071-2100`) %>% na.omit()
     
     segments_neg <- pts %>% 
-        filter(type == "Current unfavorable area") %>% select(-sd) %>% 
+        filter(type == "Baseline-unfavorable area") %>% select(-sd) %>% 
         pivot_wider(names_from = time_period, values_from = mean) %>% 
         mutate(range1 = `2041-2070` - `2011-2040`,
                range2 = `2071-2100` - `2041-2070`)
@@ -913,7 +1201,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
         coord_flip() +
         labs(y = "SHAP value change",
              x = element_blank()) +
-        scale_color_brewer(name = "Time period", palette = "Dark2") +
+        scale_color_brewer(name = "  Time period", palette = "Dark2") +
         scale_shape_manual(name = "", values = c(20, 18)) +
         scale_y_continuous(expand = expansion(mult = 0.01)) +
         scale_x_continuous(breaks = c(1:17), labels = c(drivers, "")) +
@@ -927,9 +1215,9 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
             legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
             axis.title.x = element_text(vjust = -1, hjust = 0.32),
             plot.subtitle = element_text(size = 10, vjust = -25, hjust = 2.7),
-            legend.box = 'vertical') +
-        guides(color = guide_legend("Time period"),
-               fill = guide_legend("Time period"))
+            legend.box = 'vertical', legend.box.just = "center") +
+        guides(color = guide_legend("  Time period"),
+               fill = guide_legend("  Time period"))
     
     fname <- ifelse(ssp == "SSP370", "docs/figures/Figure5_magnitude_shift.png",
                     sprintf("docs/figures/Figure_s_%s_magnitude_shift.png", ssp))
@@ -942,7 +1230,7 @@ driver <- "bio1"
 ssp <- "ssp370"
 s <- 2 # 1 or 2
 nm <- ifelse(driver == "forest", "Forest coverage",
-             ifelse(driver == "human_impact", "Human impact",
+             ifelse(driver == "human_impact", "Human land use",
                     gsub("bio", "BIO", driver)))
 nm <- ifelse(nm == "grassland", "Grassland", nm)
 sus <- ifelse(s == 1, "s", "us")

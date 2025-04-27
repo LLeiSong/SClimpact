@@ -1,4 +1,12 @@
+library(stringr)
+library(terra)
+library(sf)
 library(dplyr)
+select <- dplyr::select
+filter <- dplyr::filter
+mask <- terra::mask
+source("/home/lsong/SCImpact/R/climate_change.R")
+
 root_dir <- "/home/lsong/SCImpact"
 species_list <- read.csv(
     file.path(root_dir, "data/occurrences", "species_qualified_sdm.csv"))
@@ -28,23 +36,15 @@ if (!file.exists(fname)){
     write.csv(species_catalog, fname, row.names = FALSE)
 }; rm(evals, species_catalog, fname)
 
-var_list <- lapply(species_list, function(sp){
-    var_list <- read.csv(
-        file.path(root_dir, "data/variables/variable_list",
-                  sprintf("%s.csv", sp))) %>% 
-        pull(var_uncorrelated) %>% na.omit()
-}) %>% unlist()
+scenarios <- c(
+    "ssp126_2011-2040", "ssp126_2041-2070", "ssp126_2071-2100",
+    "ssp370_2011-2040", "ssp370_2041-2070", "ssp370_2071-2100",
+    "ssp585_2011-2040", "ssp585_2041-2070", "ssp585_2071-2100")
 
-var_list <- table(var_list) / length(species_list) * 100
-var_list <- sort(var_list[var_list > 10], decreasing = TRUE)
-features <- names(var_list)
+sdm_dir <- file.path(root_dir, "results/sdm")
+dst_dir <- file.path(root_dir, "results/species_analysis")
+if(!dir.exists(dst_dir)) dir.create(dst_dir)
 
-catalog <- lapply(features, function(feature){
-    msg <- system(
-        sprintf("sbatch schedulers/climate_change.sh %s", feature), 
-        intern = TRUE)
-    
-    data.frame(feature = feature, slurm = msg)
-}) %>% bind_rows()
-
-write.csv(catalog, file.path(root_dir, "climate_change_slurm.csv"), row.names = FALSE)
+for (sp in species_list){
+    climate_change_sp(sp, scenarios, root_dir, sdm_dir, dst_dir)
+}

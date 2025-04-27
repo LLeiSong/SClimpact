@@ -21,7 +21,8 @@ option_list <- list(
 opt <- parse_args(OptionParser(option_list = option_list))
 feature <- opt$feature
 
-species_list <- read.csv("/bigscratch/lsong/species_qualified_sdm.csv")
+species_list <- read.csv(file.path(
+    root_dir, "results", "species_reliable_final.csv"))
 species_list <- species_list$species
 
 # Climate change analysis
