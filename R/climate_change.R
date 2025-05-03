@@ -190,6 +190,7 @@ climate_change <- function(feature,
 #' @import sf
 #' @import dplyr
 #' @import stringr
+#' @import Hmisc
 #' @export
 #' @examples
 #' \donttest{
@@ -228,7 +229,11 @@ climate_change_sp <- function(sp,
         lapply(features, function(feature){
             # Load layers
             cur <- rast(fname) %>% subset(feature)
-            fut <- rast(gsub("base", scenario, fname)) %>% subset(feature)
+            fut_fname <- sprintf("shap_%s_%s", scenario, sp)
+            fut_fname <- list.files(
+                file.path(sdm_dir, sp), pattern = fut_fname,
+                full.names = TRUE)
+            fut <- rast(fut_fname) %>% subset(feature)
             
             # Load the range for clipping layers
             sp <- rev(strsplit(dirname(fname), "/")[[1]])[1]

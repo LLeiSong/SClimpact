@@ -293,10 +293,10 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
     pts <- features_periods %>% 
         filter(scenario == ssp) %>% 
         mutate(driver = ifelse(
-            driver == "forest", "Forest\ncoverage",
-            ifelse(driver == "human_impact", "Human\nland use",
+            driver == "forest", "Forest coverage",
+            ifelse(driver == "human_impact", "Human land use",
                    gsub("bio", "BIO", driver)))) %>% 
-        mutate(driver = ifelse(driver == "grassland", "Grassland\ncoverage", driver))
+        mutate(driver = ifelse(driver == "grassland", "Grassland coverage", driver))
     
     # Get the driver rank for visualization
     drivers <- pts %>% 
@@ -305,7 +305,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
                utos_rank = rank(-utos_percent)) %>% 
         mutate(SqRank = (stou_rank^2) + (utos_rank^2)/2) %>% 
         mutate(RankOrder = rank(SqRank)) %>% 
-        arrange(RankOrder)
+        arrange(-RankOrder)
     
     pts <- pts %>% 
         mutate(driver = factor(
@@ -320,64 +320,64 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
     
     g <- ggplot() + 
         geom_col(data = pts %>% filter(time_period == "2071-2100"), 
-                 color = "white", fill = "#a6611a", alpha = 0.4,
+                 color = "white", fill = "#DBC0A3",
                  aes(x = driver, y = stou_percent)) +
         geom_col(data = pts %>% filter(time_period == "2041-2070"), 
-                 color = "white", fill = "#a6611a", alpha = 0.6,
+                 color = "white", fill = "#BC8751",
                  aes(x = driver, y = stou_percent)) +
         geom_col(data = pts %>% filter(time_period == "2011-2040"), 
                  color = "white", fill = "#a6611a",
                  aes(x = driver, y = stou_percent)) +
         geom_col(data = pts %>% filter(time_period == "2071-2100"), 
-                 color = "white", fill = "#018571", alpha = 0.4,
+                 color = "white", fill = "#99CEC6",
                  aes(x = driver, y = -utos_percent)) +
         geom_col(data = pts %>% filter(time_period == "2041-2070"), 
-                 color = "white", fill = "#018571", alpha = 0.6,
+                 color = "white", fill = "#3EA293",
                  aes(x = driver, y = -utos_percent)) +
         geom_col(data = pts %>% filter(time_period == "2011-2040"),
                  aes(x = driver, y = -utos_percent), 
                  color = "white", fill = "#018571") +
         # text for suitable to unsuitable
-        geom_text(data = pts %>% filter(time_period == "2071-2100"), 
-                  aes(x = driver, y = stou_percent + 5, 
-                      label = round(stou_percent, 0)), 
-                  color = '#a6611a', size = 2, family = "Merriweather") +
+        geom_label(data = pts %>% filter(time_period == "2071-2100"), 
+                   aes(x = driver, y = stou_percent + 5, 
+                       label = round(stou_percent, 0)), 
+                   color = '#a6611a', fill = "white", size = 3, label.size = NA,
+                   family = "Merriweather") +
         geom_text(data = labels2, 
                   aes(x = driver, y = stou_percent, 
                       label = round(stou_percent, 0)), 
-                  color = 'black', size = 2, family = "Merriweather") +
+                  color = 'black', size = 3, family = "Merriweather") +
         geom_text(data = pts %>% filter(time_period == "2011-2040"), 
                   aes(x = driver, y = stou_percent / 2, 
                       label = round(stou_percent, 0)), 
-                  color = 'white', size = 2, family = "Merriweather") +
+                  color = 'white', size = 3, family = "Merriweather") +
         # text for unsuitable to suitable
-        geom_text(data = pts %>% filter(time_period == "2071-2100"), 
-                  aes(x = driver, y = -utos_percent - 5, 
-                      label = round(utos_percent, 0)), 
-                  color = '#018571', size = 2, family = "Merriweather") +
+        geom_label(data = pts %>% filter(time_period == "2071-2100"), 
+                   aes(x = driver, y = -utos_percent - 5, 
+                       label = round(utos_percent, 0)), 
+                   color = '#018571', fill = "white", size = 3, label.size = NA,
+                   family = "Merriweather") +
         geom_text(data = labels2, 
                   aes(x = driver, y = -utos_percent, 
                       label = round(utos_percent, 0)), 
-                  color = 'black', size = 2, family = "Merriweather") +
+                  color = 'black', size = 3, family = "Merriweather") +
         geom_text(data = pts %>% filter(time_period == "2011-2040"), 
                   aes(x = driver, y = -utos_percent / 2, 
                       label = round(utos_percent, 0)), 
-                  color = 'white', size = 2, family = "Merriweather") +
-        labs(x = "", y = "") +
-        scale_y_continuous(limits = c(-100, max(pts$stou_percent) + 5)) +
-        coord_polar() + theme_minimal(base_family = "Merriweather") +
-        theme(panel.grid.minor = element_blank(),
-              panel.grid.major.y = element_blank(),
-              axis.text.y = element_blank(),
-              axis.text.x = element_text(color = "black", size = 8),
-              plot.margin = unit(c(-0.5, -1, -1, -1), "cm"))
+                  color = 'white', size = 3, family = "Merriweather") +
+        labs(x = "", y = "") + coord_flip() +
+        geom_hline(yintercept = 0, color = 'black', linewidth = 1) +
+        theme_pubclean(base_family = "Merriweather") +
+        theme(axis.text.x = element_blank(),
+              axis.ticks.x = element_blank(),
+              axis.text.y = element_text(color = "black"))
     
-    ggarrange(ggarrange(NA, lgd, globe, nrow = 1, widths = c(0.2, 0.7, 0.3)), 
+    ggarrange(ggarrange(NA, lgd, globe, nrow = 1, widths = c(0.4, 0.5, 0.3)), 
               g, nrow = 2, heights = c(0.2, 1))
     
     fname <- ifelse(ssp == "SSP370", "docs/figures/Figure1_turnover_area.png",
                     sprintf("docs/figures/Figure_s_%s_turnover_area.png", ssp))
-    ggsave(fname, width = 5.5, height = 5.5, dpi = 500, bg = "white")
+    ggsave(fname, width = 6.5, height = 5, dpi = 500, bg = "white")
 }
 
 ##### Affected species ####
@@ -488,10 +488,10 @@ globe <- ggplot() +
 
 pts_all <- features_periods %>% 
     mutate(driver = ifelse(
-        driver == "forest", "Forest\ncoverage",
-        ifelse(driver == "human_impact", "Human\nland use",
+        driver == "forest", "Forest coverage",
+        ifelse(driver == "human_impact", "Human land use",
                gsub("bio", "BIO", driver)))) %>% 
-    mutate(driver = ifelse(driver == "grassland", "Grassland\ncoverage", driver))
+    mutate(driver = ifelse(driver == "grassland", "Grassland coverage", driver))
 
 for (ssp in c("SSP126", "SSP370", "SSP585")){
     # Get the driver rank for visualization
@@ -501,7 +501,7 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
                utos_rank = rank(-utos_sp_mean)) %>% 
         mutate(SqRank = (stou_rank^2) + (utos_rank^2)/2) %>% 
         mutate(RankOrder = rank(SqRank)) %>% 
-        arrange(RankOrder)
+        arrange(-RankOrder)
     
     pts <- pts_all %>% 
         filter(scenario == ssp) %>% 
@@ -524,49 +524,51 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
     
     g <- ggplot() + 
         geom_col(data = pts %>% filter(time_period == "2071-2100"), 
-                 color = "white", fill = "#a6611a", alpha = 0.4,
+                 color = "white", fill = "#DBC0A3",
                  aes(x = driver, y = stou_sp_mean)) +
         geom_col(data = pts %>% filter(time_period == "2041-2070"), 
-                 color = "white", fill = "#a6611a", alpha = 0.6,
+                 color = "white", fill = "#BC8751",
                  aes(x = driver, y = stou_sp_mean)) +
         geom_col(data = pts %>% filter(time_period == "2011-2040"), 
                  color = "white", fill = "#a6611a",
                  aes(x = driver, y = stou_sp_mean)) +
         geom_col(data = pts %>% filter(time_period == "2071-2100"), 
-                 color = "white", fill = "#018571", alpha = 0.4,
+                 color = "white", fill = "#99CEC6",
                  aes(x = driver, y = -utos_sp_mean)) +
         geom_col(data = pts %>% filter(time_period == "2041-2070"), 
-                 color = "white", fill = "#018571", alpha = 0.6,
+                 color = "white", fill = "#3EA293",
                  aes(x = driver, y = -utos_sp_mean)) +
         geom_col(data = pts %>% filter(time_period == "2011-2040"),
                  aes(x = driver, y = -utos_sp_mean), 
                  color = "white", fill = "#018571") +
         # text for suitable to unsuitable
-        geom_text(data = pts %>% filter(time_period == "2071-2100"), 
-                  aes(x = driver, y = stou_sp_mean + dodge, 
-                      label = round(stou_sp_mean, 0)), 
-                  color = '#a6611a', size = 2, family = "Merriweather") +
+        geom_label(data = pts %>% filter(time_period == "2071-2100"), 
+                   aes(x = driver, y = stou_sp_mean + dodge, 
+                       label = round(stou_sp_mean, 0)), 
+                   color = '#a6611a', fill = "white", size = 3, label.size = NA,
+                   family = "Merriweather") +
         geom_text(data = labels2, 
                   aes(x = driver, y = stou_sp_mean, 
                       label = round(stou_sp_mean, 0)), 
-                  color = 'black', size = 2, family = "Merriweather") +
+                  color = 'black', size = 3, family = "Merriweather") +
         geom_text(data = pts %>% filter(time_period == "2011-2040"), 
                   aes(x = driver, y = stou_sp_mean / 2, 
                       label = round(stou_sp_mean, 0)), 
-                  color = 'white', size = 2, family = "Merriweather") +
+                  color = 'white', size = 3, family = "Merriweather") +
         # text for unsuitable to suitable
-        geom_text(data = pts %>% filter(time_period == "2071-2100"), 
-                  aes(x = driver, y = -utos_sp_mean - dodge, 
-                      label = round(utos_sp_mean, 0)), 
-                  color = '#018571', size = 2, family = "Merriweather") +
+        geom_label(data = pts %>% filter(time_period == "2071-2100"), 
+                   aes(x = driver, y = -utos_sp_mean - dodge, 
+                       label = round(utos_sp_mean, 0)), 
+                   color = '#018571', fill = "white", size = 3, label.size = NA,
+                   family = "Merriweather") +
         geom_text(data = labels2, 
                   aes(x = driver, y = -utos_sp_mean, 
                       label = round(utos_sp_mean, 0)), 
-                  color = 'black', size = 2, family = "Merriweather") +
+                  color = 'black', size = 3, family = "Merriweather") +
         geom_text(data = pts %>% filter(time_period == "2011-2040"), 
                   aes(x = driver, y = -utos_sp_mean / 2, 
                       label = round(utos_sp_mean, 0)), 
-                  color = 'white', size = 2, family = "Merriweather") +
+                  color = 'white', size = 3, family = "Merriweather") +
         geom_col(data = bio14 %>% filter(time_period == "2011-2040"),
                  aes(x = driver, y = -utos_sp_mean), 
                  color = "white", fill = "#018571") +
@@ -575,38 +577,36 @@ for (ssp in c("SSP126", "SSP370", "SSP585")){
                  color = "white", fill = "white") +
         geom_col(data = bio14 %>% filter(time_period == "2041-2070"),
                  aes(x = driver, y = -utos_sp_mean), 
-                 color = "white", fill = "#018571", alpha = 0.6) +
+                 color = "white", fill = "#3EA293") +
         geom_col(data = bio14 %>% filter(time_period == "2071-2100"),
                  aes(x = driver, y = -utos_sp_mean), 
-                 color = "white", fill = "#018571", alpha = 0.4) +
+                 color = "white", fill = "#99CEC6") +
         geom_text(data = bio14 %>% filter(time_period == "2041-2070"), 
                   aes(x = driver, y = -utos_sp_mean / 2, 
                       label = round(utos_sp_mean, 0)), 
-                  color = 'white', size = 2, family = "Merriweather") +
-        geom_text(data = bio14 %>% filter(time_period == "2011-2040"), 
-                  aes(x = driver, y = -utos_sp_mean - dodge, 
-                      label = round(utos_sp_mean, 0)), 
-                  color = '#018571', size = 2, family = "Merriweather") +
+                  color = 'white', size = 3, family = "Merriweather") +
+        geom_label(data = bio14 %>% filter(time_period == "2011-2040"), 
+                   aes(x = driver, y = -utos_sp_mean - dodge, 
+                       label = round(utos_sp_mean, 0)), 
+                   color = '#018571', fill = "white", size = 3, label.size = NA,
+                   family = "Merriweather") +
         geom_text(data = bio14 %>% filter(time_period == "2071-2100"), 
                   aes(x = driver, y = -utos_sp_mean, 
                       label = round(utos_sp_mean, 0)), 
-                  color = 'black', size = 2, family = "Merriweather") +
-        labs(x = "", y = "") +
-        scale_y_continuous(limits = c(-45, 
-                                      max(pts$stou_sp_mean) + 5)) +
-        coord_polar() + theme_minimal(base_family = "Merriweather") +
-        theme(panel.grid.minor = element_blank(),
-              panel.grid.major.y = element_blank(),
-              axis.text.y = element_blank(),
-              axis.text.x = element_text(color = "black", size = 8),
-              plot.margin = unit(c(-0.5, -1, -1, -1), "cm"))
+                  color = 'black', size = 3, family = "Merriweather") +
+        labs(x = "", y = "") + coord_flip() +
+        geom_hline(yintercept = 0, color = 'black', linewidth = 1) +
+        theme_pubclean(base_family = "Merriweather") +
+        theme(axis.text.x = element_blank(),
+              axis.ticks.x = element_blank(),
+              axis.text.y = element_text(color = "black"))
     
-    ggarrange(ggarrange(NA, lgd, globe, nrow = 1, widths = c(0.2, 0.7, 0.3)), 
+    ggarrange(ggarrange(NA, lgd, globe, nrow = 1, widths = c(0.4, 0.5, 0.3)), 
               g, nrow = 2, heights = c(0.2, 1))
     
     fname <- ifelse(ssp == "SSP370", "docs/figures/Figure2_shifts_area.png",
                     sprintf("docs/figures/Figure_s_%s_shifts_area.png", ssp))
-    ggsave(fname, width = 5.5, height = 5.5, dpi = 500, bg = "white")
+    ggsave(fname, width = 6.5, height = 5, dpi = 500, bg = "white")
 }
 
 #### Spatial turnover of individual variable ####
