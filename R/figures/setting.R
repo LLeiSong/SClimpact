@@ -1,8 +1,12 @@
+# Load libraries
 library(stringr)
 library(terra)
 library(sf)
 library(dplyr)
+library(tidyr)
 library(ggplot2)
+library(ggnewscale)
+library(magick)
 library(ggsci)
 library(ggpubr)
 library(rnaturalearth)
@@ -16,6 +20,7 @@ library(here)
 sf_use_s2(FALSE)
 library(ggtext)
 library(showtext)
+library(flextable)
 font_add_google('Merriweather')
 showtext_auto()
 showtext_opts(dpi = 500)
@@ -23,15 +28,20 @@ mask <- terra::mask
 
 #### Model evaluation ####
 root_dir <- here()
-sdm_dir <- "results/sdm"
+sdm_dir <- file.path(root_dir, "results/sdm")
+sp_analysis_dir <- file.path(root_dir, "results/species_analysis")
+fig_dir <- file.path(root_dir, "results/figures")
+if (!dir.exists(fig_dir)) dir.create(fig_dir)
+tbl_dir <- file.path(root_dir, "results/tables")
+if (!dir.exists(tbl_dir)) dir.create(tbl_dir)
 
 species_list <- read.csv(
-    file.path(here(), "data/occurrences", "species_qualified_sdm.csv")) %>% 
+    file.path(root_dir, "data/occurrences", "species_qualified_sdm.csv")) %>% 
     arrange(num_occ)
 species_list <- species_list$species
 
 evals <- lapply(species_list, function(sp){
-    dr <- file.path(root_dir, "results/sdm", sp)
+    dr <- file.path(sdm_dir, sp)
     eval <- read.csv(file.path(dr, sprintf("cv_eval_%s.csv", sp)))
     eval <- eval %>% 
         mutate(accuracy = (tp + tn) / (tp + tn + fp + fn))
@@ -54,7 +64,7 @@ evals <- evals %>%
         levels = c("accuracy", "auc", "tss"),
         labels = c("Accuracy", "AUC", "TSS")))
 
-write.csv(evals, "results/model_evaluation.csv", row.names = FALSE)
+write.csv(evals, file.path(tbl_dir, "model_evaluation.csv"), row.names = FALSE)
 
 smr_evals <- evals %>% filter(type == "testing") %>% 
     group_by(metric.eval) %>% 
@@ -85,8 +95,8 @@ g <- ggplot(data = evals %>% filter(type == "testing"),
 
 ggarrange(g, tbl, nrow = 1, widths = c(0.7, 0.3))
 
-ggsave("docs/figures/Figure_s4_model_eval.png",
-       width = 5, height = 3, dpi = 500)
+ggsave(file.path(fig_dir, "Figure_s4_model_eval.png"),
+       width = 5, height = 3, dpi = 500, bg = "white")
 
 #### Variable selection ####
 # Subset the species
@@ -94,7 +104,7 @@ species_list <- unique(evals$species)
 
 # Variables
 vars <- data.frame(
-    var = names(rast(file.path("data/variables/Env", "AllEnv.tif"))),
+    var = names(rast(file.path(root_dir, "data/variables/Env", "AllEnv.tif"))),
     num = 0)
 for (sp in species_list) {
     dr <- file.path(root_dir, "data/variables/variable_list")
@@ -112,7 +122,7 @@ vars <- vars %>% mutate(ratio = num / length(species_list)) %>%
     mutate(selected = ifelse(ratio > 0.1, "yes", "no")) %>% 
     mutate(var = fct_reorder(var, num))
 
-write.csv(vars, "results/variable_selection.csv", row.names = FALSE)
+write.csv(vars, file.path(tbl_dir, "variable_selection.csv"), row.names = FALSE)
 
 ggplot(data = vars, 
        aes(x = num, xend = 0,
@@ -131,14 +141,13 @@ ggplot(data = vars,
         axis.title.x = element_text(vjust = -1),
         legend.position = "none")
 
-ggsave("docs/figures/Figure_s2_vars_selected.png",
-       width = 4, height = 4.2, dpi = 500)
+ggsave(file.path(fig_dir, "Figure_s2_vars_selected.png"),
+       width = 4, height = 4.2, dpi = 500, bg = "white")
 
 #### SHAP: number of Monte Carlo iterations ####
 shaps <- lapply(species_list, function(sp){
     read.csv(
-        file.path(root_dir, "results/sdm", sp, 
-                  sprintf("shap_cor_%s.csv", sp))) %>% 
+        file.path(sdm_dir, sp, sprintf("shap_cor_%s.csv", sp))) %>% 
         select(nshap, cor) %>% mutate(species = sp)
 }) %>% bind_rows() %>% filter(nshap > 10)
 
@@ -160,13 +169,10 @@ ggplot(shaps_mean) +
         color = "black"),
         axis.text.y = element_text(color = "black"))
 
-ggsave("docs/figures/Figure_s3_nshap.png",
-       width = 3, height = 4, dpi = 500)
+ggsave(file.path(fig_dir, "Figure_s3_nshap.png"),
+       width = 3, height = 4, dpi = 500, bg = "white")
 
-#### Impact of drivers ####
-data_dir <- "results/climate_change"
-time_periods <- c("2011-2040", "2041-2070", "2071-2100")
-
+#### Individual species ####
 # All drivers
 var_list <- lapply(species_list, function(sp){
     var_list <- read.csv(
@@ -178,6 +184,176 @@ var_list <- lapply(species_list, function(sp){
 var_list <- table(var_list) / length(species_list) * 100
 var_list <- sort(var_list[var_list > 10], decreasing = TRUE)
 features <- names(var_list)
+
+# Load data
+sp_names <- read.csv(
+    file.path(root_dir, "data/occurrences", 
+              "occurrences_afteraoh_0018860-240906103802322.csv")) %>% 
+    select(species, order) %>% unique()
+
+sp_analysis <- lapply(species_list, function(sp){
+    fname <- file.path(sp_analysis_dir, sprintf("changes_%s.csv", sp))
+    numbers <- read.csv(fname) %>% 
+        separate(scenario, c('scenario', 'year'), sep = "_") %>% 
+        filter(class == "direction change") %>%
+        select(-c(class, metrics))
+    sp_sum <- numbers %>% 
+        group_by(scenario, year, sp, feature) %>% 
+        summarise(all = sum(value), .groups = "drop")
+    left_join(numbers, sp_sum, by = join_by(scenario, year, sp, feature)) %>% 
+        mutate(perct = value / all * 100) %>% select(-c(value, all))
+}) %>% bind_rows() %>% 
+    mutate(sp = gsub("_", " ", sp))
+
+sp_analysis <- left_join(sp_analysis, sp_names, by = c("sp" = "species"))
+
+# Make a figure
+orders <- sp_analysis %>% filter(feature %in% features) %>%
+    group_by(feature, type, scenario, year, order) %>%
+    summarise(perct = mean(perct), .groups = "drop") %>%
+    group_by(feature, type, scenario, year) %>%
+    arrange(-perct) %>% slice_head(n = 1) %>%
+    mutate(feature = ifelse(
+        feature == "forest", "FOR",
+        ifelse(feature == "human_impact", "HLU",
+               gsub("bio", "BIO", feature)))) %>%
+    mutate(feature = ifelse(
+        feature == "grassland", "GRA", feature))
+
+# Parameter setting
+ssp <- "ssp370"
+time_period <- "2041-2070"
+
+orders_sub <- orders %>% filter(scenario == ssp & year == time_period)
+orders_sub <- orders_sub %>%
+    mutate(perct_show = ifelse(
+        type == "P to P", perct - 30,
+        ifelse(type == "N to N", perct - 10, perct)))
+
+orders_fig1 <- orders_sub %>% filter(type %in% c("P to N", "N to P"))
+
+p <- ggplot() +
+    geom_col(data = orders_fig1, color = "white", fill = "white",
+             aes(x = reorder_within(feature, -perct, type), y = perct)) +
+    geom_col(data = orders_fig1, color = "white",
+             aes(x = reorder_within(feature, -perct, type), y = perct_show,
+                 fill = type), show.legend = FALSE) +
+    geom_text(data = orders_fig1, aes(x = reorder_within(feature, -perct, type),
+                                      y = perct_show + 2, label = order),
+              color = 'black', size = 2.7, family = "Merriweather", hjust = 0) +
+    geom_text(data = orders_fig1,
+              aes(x = reorder_within(feature, -perct, type),
+                  y = perct_show - 1, label = sprintf("%.0f%s", perct, "%")),
+              color = 'white', size = 2.5, family = "Merriweather", hjust = 1) +
+    scale_fill_manual(values = c("#018571", '#a6611a')) +
+    scale_x_reordered(limits = rev) +
+    theme_pubclean(base_family = "Merriweather", base_size = 11) + coord_flip() +
+    xlab("") + ylab("") + ylim(0, 75) +
+    facet_wrap(
+        ~factor(type, levels = c("P to N", "N to P"),
+                labels = c("(b) P2N turnover", "(c) N2P turnover")),
+        scales = "free_y") +
+    theme(axis.text = element_text(color = "black"),
+          panel.grid.major.y = element_line(color = "white"),
+          strip.background = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          strip.text.x = element_text(hjust = 0.3),
+          strip.text = element_text(face = "bold", size = 11),
+          plot.margin = unit(c(0, -2, -0.5, 0), "cm"))
+
+img <- image_read(file.path(fig_dir, "fig1_flow.png"))
+g <- image_ggplot(img, interpolate = TRUE)
+
+ggarrange(g, p, nrow = 2, heights = c(1, 3), 
+          labels = c("a", ""),
+          vjust = 4, 
+          font.label = list(
+              size = 11, color = "black", 
+              face = "bold", family = "Merriweather"))
+
+ggsave(file.path(fig_dir, "Figure1_driver_major_order.png"), 
+       width = 6.5, height = 4, dpi = 500, bg = "white")
+
+# Make a table for all orders
+orders_all <- sp_analysis %>% filter(feature %in% features) %>%
+    group_by(feature, type, scenario, year, order) %>%
+    summarise(perct = mean(perct), .groups = "drop") %>%
+    group_by(feature, type, scenario, year) %>%
+    summarise(perct_mean = mean(perct),
+              perct_sd = sd(perct),
+              species_num = n(),
+              .groups = "drop")
+
+write.csv(orders_all, file.path(tbl_dir, "variable_turnovers_order.csv"),
+          row.names = FALSE)
+
+# Make supplementary
+ssps <- c("ssp126", "ssp370", "ssp585")
+time_periods <- c("2011-2040", "2041-2070", "2071-2100")
+
+for (ssp in ssps){
+    for (time_period in time_periods){
+        orders_sub <- orders %>% filter(scenario == ssp & year == time_period)
+        orders_sub <- orders_sub %>%
+            mutate(perct_show = ifelse(
+                type == "P to P", perct - 30,
+                ifelse(type == "N to N", perct - 10, perct + 10)))
+        
+        if (ssp %in% c("ssp370", "ssp585") & time_period == "2071-2100"){
+            orders_sub <- orders_sub %>%
+                mutate(perct_show = ifelse(
+                    type == "P to N", perct_show - 10, perct_show))
+            if (ssp == "ssp585"){
+                orders_sub <- orders_sub %>%
+                    mutate(perct_show = ifelse(
+                        type == "P to N", perct_show - 1, perct_show))}}
+        
+        ggplot() +
+            geom_col(data = orders_sub, color = "white", fill = "white",
+                     aes(x = reorder_within(feature, -perct, type), 
+                         y = perct)) +
+            geom_col(data = orders_sub, color = "white", 
+                     aes(x = reorder_within(feature, -perct, type), 
+                         y = perct_show, fill = type), show.legend = FALSE) +
+            geom_text(data = orders_sub, 
+                      aes(x = reorder_within(feature, -perct, type),
+                          y = perct_show + 2, label = order),
+                      color = 'black', size = 2.7, family = "Merriweather", 
+                      hjust = 0) +
+            geom_text(data = orders_sub,
+                      aes(x = reorder_within(feature, -perct, type),
+                          y = perct_show - 1, 
+                          label = sprintf("%.0f%s", perct, "%")),
+                      color = 'white', size = 2.5, family = "Merriweather", 
+                      hjust = 1) +
+            scale_x_reordered(limits = rev) + ylim(0, 100) +
+            scale_fill_manual(values = c("black", "#018571", '#a6611a', "black")) +
+            theme_pubclean(base_family = "Merriweather", base_size = 11) + 
+            coord_flip() + xlab("") + ylab("") +
+            facet_wrap(
+                ~factor(type, 
+                        levels = c("P to N", "N to P", "P to P", "N to N"),
+                        labels = c("P2N turnover", "N2P turnover", 
+                                   "P2P turnover", "N2N turnover")),
+                scales = "free_y") +
+            theme(axis.text = element_text(color = "black"),
+                  panel.grid.major.y = element_line(color = "white"),
+                  strip.background = element_blank(),
+                  axis.text.x = element_blank(),
+                  axis.ticks.x = element_blank(),
+                  strip.text.x = element_text(hjust = 0.3),
+                  strip.text = element_text(face = "bold", size = 11))
+        
+        fname <- file.path(
+            fig_dir, sprintf("Figure1_S5_%s_%s.png", ssp, time_period))
+        ggsave(fname, width = 6.5, height = 6, dpi = 500, bg = "white")
+    }
+}
+
+#### Impact of drivers ####
+data_dir <- file.path(root_dir, "results/climate_change")
+time_periods <- c("2011-2040", "2041-2070", "2071-2100")
 
 ##### Affected area ####
 features_periods <- lapply(time_periods, function(time_period){
@@ -221,7 +397,8 @@ features_periods <- lapply(time_periods, function(time_period){
     })) %>% mutate(time_period = time_period)
 }) %>% bind_rows()
 
-write.csv(features_periods, "results/affect_area.csv", row.names = FALSE)
+write.csv(features_periods, file.path(tbl_dir, "affect_area.csv"), 
+          row.names = FALSE)
 
 # Across variable groups: temperature, precipitation and land cover
 tbl_vals <- features_periods %>% 
@@ -233,14 +410,16 @@ tbl_vals <- features_periods %>%
     summarise(stou_sd = sd(stou_percent), 
               stou_percent = mean(stou_percent),
               utos_sd = sd(utos_percent),
-              utos_percent = mean(utos_percent)) %>% 
+              utos_percent = mean(utos_percent),
+              .groups = "drop") %>% 
     mutate(P2N = sprintf("%.1f\u00B1%.1f", stou_percent, stou_sd),
            N2P = sprintf("%.1f\u00B1%.1f", utos_percent, utos_sd)) %>% 
     select(scenario, time_period, group, P2N, N2P) %>% 
     arrange(time_period) %>% 
-    pivot_wider(names_from = c(scenario, time_period), values_from = c(P2N, N2P))
+    pivot_wider(names_from = c(scenario, time_period), 
+                values_from = c(P2N, N2P))
 
-write.csv(tbl_vals, "results/affect_area_groups.csv", 
+write.csv(tbl_vals, file.path(tbl_dir, "affect_area_groups.csv"), 
           row.names = FALSE, fileEncoding = "UTF-16LE")
 
 # Make a delicate legend
