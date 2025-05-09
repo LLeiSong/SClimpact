@@ -145,19 +145,17 @@ p <- ggplot(data = sp_analysis_fig) +
 img <- image_read(file.path(fig_dir, "fig1_flow.png"))
 g <- image_ggplot(img, interpolate = TRUE)
 
-ggarrange(g, p, nrow = 2, heights = c(1, 3), 
-          labels = c("a", ""),
-          vjust = 4, hjust = -5, 
-          font.label = list(
-              size = 11, color = "black", 
-              face = "bold", family = "Merriweather"))
+ggarrange(g, p, nrow = 2, heights = c(1, 3))
 
 ggsave(file.path(fig_dir, "Figure1_driver_species.png"), 
-       width = 6.5, height = 4, dpi = 500, bg = "white")
+       width = 6.5, height = 4.5, dpi = 500, bg = "white")
 
 ##### Extended Data Table 1 ####
 en_max_fig <- sp_analysis_fig %>% 
     filter(status == "EN") %>% 
+    mutate(type = case_when(
+        type == "P to N" ~ "P2N",
+        type == "N to P" ~ "N2P")) %>% 
     group_by(feature, type, scenario, year) %>% 
     arrange(-perct) %>% slice_head(n = 1) %>% 
     arrange(desc(type), desc(plot_order)) %>% 
