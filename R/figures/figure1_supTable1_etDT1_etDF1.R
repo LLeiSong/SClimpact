@@ -1,23 +1,6 @@
 # Load settings
 source("R/figures/setting.R")
 
-#### Load qualified species list ####
-species_list <- read.csv(
-    file.path(root_dir, "results/species_reliable_final.csv")) %>% 
-    pull(species)
-
-#### Load selected environmental features ####
-var_list <- lapply(species_list, function(sp){
-    var_list <- read.csv(
-        file.path(root_dir, "data/variables/variable_list",
-                  sprintf("%s.csv", sp))) %>% 
-        pull(var_uncorrelated) %>% na.omit()
-}) %>% unlist()
-
-var_list <- table(var_list) / length(species_list) * 100
-var_list <- sort(var_list[var_list > 10], decreasing = TRUE)
-features <- names(var_list)
-
 #### Load IUCN status ####
 sp_names <- read.csv(
     file.path(root_dir, "data/occurrences", 
@@ -49,7 +32,7 @@ sp_analysis <- lapply(species_list, function(sp){
 # Attach IUCN status to the species analysis results
 sp_analysis <- left_join(sp_analysis, sp_names, by = c("sp" = "species"))
 
-# Standerdize the names 
+# Standardize the names 
 sp_analysis <- sp_analysis %>% filter(feature %in% features) %>%
     mutate(feature = ifelse(
         feature == "forest", "FOR",
@@ -59,11 +42,13 @@ sp_analysis <- sp_analysis %>% filter(feature %in% features) %>%
         feature == "grassland", "GRA", feature))
 
 #### Make figures and tables ####
-
 ##### Supplementary Table 1 ####
+
 sp_analysis_tosave <- sp_analysis %>% 
-    rename("species" = sp, "turnover" = type, 
-           "area (% of habitat)" = perct, "IUCN category" = category)
+    rename("Species" = sp, "Turnover" = type, 
+           "Area (% of habitat)" = perct, "IUCN category" = category,
+           "Variable" = feature, "Year" = year, "Scenario" = scenario,
+           "Status" = status)
 write.csv(
     sp_analysis_tosave, file.path(tbl_dir, "supplementary_table1.csv"),
     row.names = FALSE)
@@ -130,8 +115,9 @@ p <- ggplot(data = sp_analysis_fig) +
     new_scale_fill() +
     geom_point(data = en_fig, 
                aes(x = plot_order, y = perct, fill = significance), 
-               size = 1.4, shape = 21, color = "white", stroke = 0.2) +
-    scale_fill_manual("", values = c("#313695", "#8e0152", "#F99379")) +
+               size = 1.6, shape = 21, color = "white", stroke = 0.2) +
+    scale_fill_manual("Median of endangered species", 
+                      values = c("#313695", "#8e0152", "#F99379")) +
     coord_flip() +
     scale_x_discrete(labels = function(x){gsub("_N to P|_P to N", "", x)}) +
     scale_y_continuous(labels = function(x){paste0(x, "%")}) +
@@ -151,8 +137,10 @@ p <- ggplot(data = sp_analysis_fig) +
           plot.margin = unit(c(0, 0, -0.3, 0), "cm"),
           legend.direction = "vertical",
           legend.position = "inside",
-          legend.position.inside = c(0.35, 0.3),
-          legend.spacing = unit(rep(0, 4), "cm"))
+          legend.title = element_text(size = 8), 
+          legend.position.inside = c(0.32, 0.3),
+          legend.spacing = unit(rep(0, 4), "cm")) +
+    guides(fill = guide_legend(override.aes = list(size = 3)))
 
 img <- image_read(file.path(fig_dir, "fig1_flow.png"))
 g <- image_ggplot(img, interpolate = TRUE)
@@ -174,10 +162,14 @@ en_max_fig <- sp_analysis_fig %>%
     arrange(-perct) %>% slice_head(n = 1) %>% 
     arrange(desc(type), desc(plot_order)) %>% 
     ungroup() %>% select(type, feature, sp, perct, category) %>% 
+    mutate(perct = round(perct, 2)) %>% 
     rename("Variable" = feature, "Turnover" = type, "Species" = sp, 
            "Area (% of habitat)" = perct, "IUCN category" = category)
 
-en_max_fig %>% flextable() %>% autofit() %>% 
+en_max_fig %>% mutate(Species = sprintf(" %s ", Species)) %>% 
+    flextable() %>% autofit() %>% 
+    align(align = "left", part = "all") %>% 
+    bold(part = "header") %>% 
     font(fontname = "Merriweather", part = "all") %>% 
     merge_at(i = 1:16, j = 1) %>% 
     merge_at(i = 17:32, j = 1) %>% 
@@ -234,38 +226,44 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
             left_join(mw_test, by = join_by(feature, type))
         
         if (ssp == "ssp370" & time_period == "2041-2070"){
-            ggplot(data = sp_analysis_fig) +
+            g <- ggplot(data = sp_analysis_fig) +
                 geom_boxplot(aes(x = plot_order, y = perct, fill = type), 
-                             outliers = FALSE, fatten = NA, color = "white") +
+                             outliers = FALSE, fatten = 1) +
                 scale_fill_manual("Turnover", values = c("#018571", '#a6611a')) +
                 new_scale_fill() +
-                geom_boxplot(aes(x = plot_order, y = perct), fill = "white",
-                             outliers = FALSE, notch = FALSE, 
-                             fatten = 5, color = "white") +
                 geom_point(data = en_fig, 
                            aes(x = plot_order, y = perct, fill = significance), 
-                           size = 1.4, shape = 21, color = "white", stroke = 0.2) +
+                           size = 2, shape = 21, color = "white", stroke = 0.2) +
                 scale_fill_manual("Median of endangered species", 
                                   values = c("#313695", "#8e0152", "#F99379")) +
-                geom_point(data = en_fig, 
-                           aes(x = plot_order, y = perct), 
-                           size = 1.6, color = "white") +
                 coord_flip() +
+                scale_x_discrete(labels = function(x){
+                    gsub("_N to P|_P to N", "", x)}) +
+                scale_y_continuous(labels = function(x){paste0(x, "%")}) +
                 theme_pubclean(base_family = "Merriweather", base_size = 11) + 
                 xlab("") + ylab("") + 
-                facet_wrap(~type, scales = "free") +
-                theme(axis.text = element_text(color = "white"),
+                facet_wrap(
+                    ~factor(type, levels = c("P to N", "N to P"),
+                            labels = c(sprintf("(%s %s)\nP2N turnover", 
+                                               ssp, time_period), 
+                                       sprintf("(%s %s)\nN2P turnover", 
+                                               ssp, time_period))),
+                    scales = "free") +
+                theme(axis.text = element_text(color = "black"),
                       panel.grid.major.y = element_line(color = "white"),
+                      panel.grid.major.x = element_line(
+                          linetype = "dotted", color = "lightgrey"),
                       strip.background = element_blank(),
-                      axis.ticks = element_blank(),
-                      strip.text.x = element_text(color = "white"),
-                      strip.text = element_text(color = "white"),
-                      plot.margin = unit(c(0, 0, -0.3, 0), "cm"),
+                      strip.text.x = element_text(hjust = 0.3),
+                      strip.text = element_text(face = "bold", size = 10),
                       legend.direction = "vertical",
                       legend.position = "inside",
                       legend.position.inside = c(0.5, 0.5),
-                      legend.text = element_text(size = 12),
-                      legend.title = element_text(size = 12))
+                      legend.text = element_text(size = 13),
+                      legend.title = element_text(size = 13)) +
+                guides(fill = guide_legend(override.aes = list(size = 6)))
+            
+            as_ggplot(get_legend(g))
         } else {
             ggplot(data = sp_analysis_fig) +
                 geom_boxplot(aes(x = plot_order, y = perct, fill = type), 
@@ -274,7 +272,7 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
                 new_scale_fill() +
                 geom_point(data = en_fig, 
                            aes(x = plot_order, y = perct, fill = significance), 
-                           size = 1.4, shape = 21, color = "white", stroke = 0.2,
+                           size = 2, shape = 21, color = "white", stroke = 0.2,
                            show.legend = FALSE) +
                 scale_fill_manual("", values = c("#313695", "#8e0152", "#F99379")) +
                 coord_flip() +
