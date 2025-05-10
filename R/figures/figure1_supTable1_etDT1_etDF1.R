@@ -171,6 +171,9 @@ en_max_fig %>% mutate(Species = sprintf(" %s ", Species)) %>%
     font(fontname = "Merriweather", part = "all") %>% 
     merge_at(i = 1:16, j = 1) %>% 
     merge_at(i = 17:32, j = 1) %>% 
+    # Add some lines
+    border(i = 16, j = 1:5, 
+           border.bottom = fp_border(color = "gray")) %>% 
     save_as_image(file.path(fig_dir, "extended_data_table1.png"), res = 500)
 
 ##### Extended Data Fig.1 ####

@@ -260,6 +260,11 @@ rbind(area_vals, species_vals) %>%
     merge_at(i = 1:3, j = 2) %>% merge_at(i = 4:6, j = 2) %>%
     merge_at(i = 7:12, j = 1) %>% 
     merge_at(i = 7:10, j = 2) %>% merge_at(i = 11:12, j = 2) %>% 
+    # Add some lines
+    border(i = c(3, 9), j = 3:12, 
+           border.bottom = fp_border(color = "gray")) %>% 
+    border(i = 6, j = 2:12, 
+           border.bottom = fp_border(color = "gray")) %>%
     save_as_image(file.path(fig_dir, "extended_data_table2.png"), res = 500)
 
 # Clean a bit
@@ -269,7 +274,8 @@ rm(area_vals, species_vals, nms_in_order); gc()
 figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
     figs <- lapply(time_periods, function(tp){
         if (ssp == "SSP370" & tp == "2041-2070"){
-            titles <- c("b", "c", "d", "e")
+            titles <- c("(b) Global area", "(c) Area by region", 
+                        "(d) Local intensity", "(e) Intensity by region")
         } else{
             titles <- c(
                 sprintf("(%s %s)\nGlobal area", tolower(ssp), tp), 
@@ -486,7 +492,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                       family = "Merriweather", size = 11,
                       face = "bold", hjust = 0.5),
                   axis.text.x = element_text(color = "black"),
-                  plot.margin = unit(c(0, 0, -0.2, 0), "cm"))
+                  plot.margin = unit(c(0, 0, 0, 0), "cm"))
         
         g2 <- ggarrange(g2, g3, ncol = 2)
         
@@ -504,7 +510,7 @@ img <- image_read(file.path(fig_dir, "fig2_flow.png"))
 g <- image_ggplot(img, interpolate = TRUE)
 
 ggarrange(g, figs[[2]][[2]][[1]], figs[[2]][[2]][[2]], 
-          nrow = 3, heights = c(1.2, 3, 3))
+          nrow = 3, heights = c(1.4, 3, 3))
 
 ggsave(file.path(fig_dir, "Figure2_global_patterns.png"), 
        width = 6.5, height = 7, dpi = 500, bg = "white")
