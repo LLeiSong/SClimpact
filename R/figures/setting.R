@@ -17,15 +17,17 @@ library(forcats)
 library(tidytext)
 library(biscale)
 library(Hmisc)
+library(spatstat)
 library(here)
-sf_use_s2(FALSE)
 library(ggtext)
 library(showtext)
 library(flextable)
 library(officer)
+library(parallel)
 font_add_google('Merriweather')
 showtext_auto()
 showtext_opts(dpi = 500)
+sf_use_s2(FALSE)
 mask <- terra::mask
 
 #### Model evaluation ####
@@ -60,3 +62,42 @@ var_list <- lapply(species_list, function(sp){
 var_list <- table(var_list) / length(species_list) * 100
 var_list <- sort(var_list[var_list > 10], decreasing = TRUE)
 features <- names(var_list)
+
+#### Load IUCN status ####
+sp_names <- read.csv(
+    file.path(root_dir, "data/occurrences", 
+              "species_catalog_0018860-240906103802322.csv"))
+sp_names <- sp_names %>% select(species, Red_List_Category_2019) %>% 
+    rename(category = Red_List_Category_2019) %>% 
+    filter(species %in% gsub("_", " ", species_list)) %>% 
+    mutate(category = factor(
+        category, levels = c("CR", "EN", "VU", "NT", "LC", "DD"))) %>% 
+    group_by(species) %>% arrange(category) %>% slice_head(n = 1) %>% 
+    # Vulnerable, Endangered, or Critically Endangered is endangered
+    mutate(status = ifelse(category %in% c("CR", "EN", "VU"), "EN", "NEN"))
+
+#### Define layer for low, middle and high latitude areas ####
+areas <- st_bbox(c(xmin = -180, ymin = -90, xmax = 180, ymax = 90)) %>% 
+    st_as_sfc() %>% st_as_sf(crs = 4326)
+mid_lines <- st_linestring(rbind(c(-180, 30), c(180, 30))) %>% 
+    st_sfc(crs = 4326) %>% st_as_sf() %>% 
+    rbind(st_linestring(rbind(c(-180, -30), c(180, -30))) %>% 
+              st_sfc(crs = 4326) %>% st_as_sf())
+
+high_lines <- st_linestring(rbind(c(-180, 60), c(180, 60))) %>% 
+    st_sfc(crs = 4326) %>% st_as_sf() %>% 
+    rbind(st_linestring(rbind(c(-180, -60), c(180, -60))) %>% 
+              st_sfc(crs = 4326) %>% st_as_sf())
+
+areas <- st_split(areas, st_union(mid_lines, high_lines)$x) %>% 
+    st_collection_extract("POLYGON") %>% 
+    mutate(area = c("High", "Middle", "Low", "Middle", "High")) %>% 
+    rename(geometry = x) %>% 
+    st_transform(crs = analysis_crs)
+
+rm(mid_lines, high_lines)
+
+#### World boundary without antarctic ####
+bry <- ne_countries(scale = "medium") %>%
+    filter(continent != "Antarctica") %>%
+    st_union() %>% st_transform(plot_crs)

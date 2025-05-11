@@ -288,6 +288,7 @@ climate_change_sp <- function(sp,
                              wtd.mean(chg$N, chg$area, na.rm = TRUE))
             mag_change_sds <- c(wtd.var(chg$P, chg$area, na.rm = TRUE),
                                 wtd.var(chg$N, chg$area, na.rm = TRUE))
+            mag_change_sds <- sqrt(mag_change_sds)
             
             mag_changes <- data.frame(
                 sp = sp, feature = feature,

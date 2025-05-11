@@ -1,19 +1,6 @@
 # Load settings
 source("R/figures/setting.R")
 
-#### Load IUCN status ####
-sp_names <- read.csv(
-    file.path(root_dir, "data/occurrences", 
-              "species_catalog_0018860-240906103802322.csv"))
-sp_names <- sp_names %>% select(species, Red_List_Category_2019) %>% 
-    rename(category = Red_List_Category_2019) %>% 
-    filter(species %in% gsub("_", " ", species_list)) %>% 
-    mutate(category = factor(
-        category, levels = c("CR", "EN", "VU", "NT", "LC", "DD"))) %>% 
-    group_by(species) %>% arrange(category) %>% slice_head(n = 1) %>% 
-    # Vulnerable, Endangered, or Critically Endangered is endangered
-    mutate(status = ifelse(category %in% c("CR", "EN", "VU"), "EN", "NEN"))
-
 #### Analyze the areas of turnovers for each species ####
 sp_analysis <- lapply(species_list, function(sp){
     fname <- file.path(sp_analysis_dir, sprintf("changes_%s.csv", sp))
@@ -34,12 +21,11 @@ sp_analysis <- left_join(sp_analysis, sp_names, by = c("sp" = "species"))
 
 # Standardize the names 
 sp_analysis <- sp_analysis %>% filter(feature %in% features) %>%
-    mutate(feature = ifelse(
-        feature == "forest", "FOR",
-        ifelse(feature == "human_impact", "HLU",
-               gsub("bio", "BIO", feature)))) %>%
-    mutate(feature = ifelse(
-        feature == "grassland", "GRA", feature))
+    mutate(feature = case_when(
+        feature == "forest" ~ "FOR",
+        feature == "human_impact" ~ "HLU",
+        feature == "grassland" ~ "GRA",
+        str_detect(feature, "bio") ~ toupper(feature)))
 
 #### Make figures and tables ####
 ##### Supplementary Table 1 ####
@@ -145,10 +131,10 @@ p <- ggplot(data = sp_analysis_fig) +
 img <- image_read(file.path(fig_dir, "fig1_flow.png"))
 g <- image_ggplot(img, interpolate = TRUE)
 
-ggarrange(g, p, nrow = 2, heights = c(1, 3))
+ggarrange(g, NULL, p, nrow = 3, heights = c(1, 0.1, 3))
 
 ggsave(file.path(fig_dir, "Figure1_driver_species.png"), 
-       width = 6.5, height = 4.5, dpi = 500, bg = "white")
+       width = 6.5, height = 4.6, dpi = 500, bg = "white")
 
 ##### Extended Data Table 1 ####
 en_max_fig <- sp_analysis_fig %>% 
@@ -226,6 +212,12 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
             summarise(perct = median(perct), .groups = "drop") %>% 
             left_join(mw_test, by = join_by(feature, type))
         
+        cols <- data.frame(
+            labels = c("p < 0.05", " 0.05 \U2264 P < 0.1", "P \u2265 0.1"), 
+            colors = c("#313695", "#8e0152", "#F99379"))
+        cols <- cols %>% filter(labels %in% unique(en_fig$significance)) %>% 
+            pull(colors)
+        
         if (ssp == "ssp370" & time_period == "2041-2070"){
             g <- ggplot(data = sp_analysis_fig) +
                 geom_boxplot(aes(x = plot_order, y = perct, fill = type), 
@@ -235,8 +227,7 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
                 geom_point(data = en_fig, 
                            aes(x = plot_order, y = perct, fill = significance), 
                            size = 2, shape = 21, color = "white", stroke = 0.2) +
-                scale_fill_manual("Median of endangered species", 
-                                  values = c("#313695", "#8e0152", "#F99379")) +
+                scale_fill_manual("Median of endangered species", values = cols) +
                 coord_flip() +
                 scale_x_discrete(labels = function(x){
                     gsub("_N to P|_P to N", "", x)}) +
@@ -275,7 +266,7 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
                            aes(x = plot_order, y = perct, fill = significance), 
                            size = 2, shape = 21, color = "white", stroke = 0.2,
                            show.legend = FALSE) +
-                scale_fill_manual("", values = c("#313695", "#8e0152", "#F99379")) +
+                scale_fill_manual("", values = cols) +
                 coord_flip() +
                 scale_x_discrete(labels = function(x){
                     gsub("_N to P|_P to N", "", x)}) +
@@ -307,3 +298,6 @@ ggarrange(plotlist = figs, nrow = 3, ncol = 3)
 
 ggsave(file.path(fig_dir, "extended_data_fig1.png"), 
        width = 18, height = 12, dpi = 500, bg = "white")
+
+# Clean up
+rm(list = ls()); gc()
