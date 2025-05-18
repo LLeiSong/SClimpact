@@ -283,25 +283,36 @@ climate_change_sp <- function(sp,
             lyrs$area <- cellSize(lyrs, unit = "km")
             
             chg <- values(lyrs) %>% as.data.frame()
+            nums <- colSums(!is.na(chg))
             
-            mag_changes <- c(wtd.mean(chg$P, chg$area, na.rm = TRUE),
-                             wtd.mean(chg$N, chg$area, na.rm = TRUE))
-            mag_change_sds <- c(wtd.var(chg$P, chg$area, na.rm = TRUE),
-                                wtd.var(chg$N, chg$area, na.rm = TRUE))
-            mag_change_sds <- sqrt(mag_change_sds)
+            mag_medians <- c(
+                ifelse(nums[1] > 0, weighted.quantile(chg$P, chg$area, 0.5), NA),
+                ifelse(nums[2] > 0, weighted.quantile(chg$N, chg$area, 0.5), NA))
+            mag_1q <- c(
+                ifelse(nums[1] > 0, weighted.quantile(chg$P, chg$area, 0.25), NA),
+                ifelse(nums[2] > 0, weighted.quantile(chg$N, chg$area, 0.25), NA))
+            mag_3q <- c(
+                ifelse(nums[1] > 0, weighted.quantile(chg$P, chg$area, 0.75), NA),
+                ifelse(nums[2] > 0, weighted.quantile(chg$N, chg$area, 0.75), NA))
             
             mag_changes <- data.frame(
                 sp = sp, feature = feature,
                 class = "magnitude change",
                 type = c("P", "N"),
-                metrics = "mean",
-                value = mag_changes) %>% 
+                metrics = "median",
+                value = mag_medians) %>% 
                 rbind(data.frame(
                     sp = sp, feature = feature,
                     class = "magnitude change",
                     type = c("P", "N"),
-                    metrics = "sd",
-                    value = mag_change_sds))
+                    metrics = "1q",
+                    value = mag_1q)) %>% 
+                rbind(data.frame(
+                    sp = sp, feature = feature,
+                    class = "magnitude change",
+                    type = c("P", "N"),
+                    metrics = "3q",
+                    value = mag_3q))
             
             rbind(dir_changes, mag_changes)
         }) %>% 

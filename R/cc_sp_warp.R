@@ -1,6 +1,7 @@
 library(stringr)
 library(terra)
 library(sf)
+library(spatstat)
 library(dplyr)
 select <- dplyr::select
 filter <- dplyr::filter

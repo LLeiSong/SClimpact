@@ -158,7 +158,7 @@ write.csv(
     row.names = FALSE)
 
 #### Make figures and tables ####
-##### Supplementary Table 2 ####
+##### Supplementary Table 3 ####
 
 areas_periods_tosave <- areas_periods %>% 
     select(driver, area, scenario, time_period, stou_percent, utos_percent) %>%
@@ -172,11 +172,11 @@ areas_periods_tosave <- areas_periods %>%
     rename("Variable" = driver, "Region" = area, "Scenario" = scenario,
            "Time period" = time_period, "Global area of P2N (%)" = stou_percent,
            "Global area of N2P (%)" = utos_percent)
-write.csv(areas_periods_tosave, file.path(tbl_dir, "supplementary_table2.csv"), 
+write.csv(areas_periods_tosave, file.path(tbl_dir, "supplementary_table3.csv"), 
           row.names = FALSE)
 rm(areas_periods_tosave)
 
-##### Supplementary Table 3 ####
+##### Supplementary Table 4 ####
 species_periods_tosave <- species_periods %>% 
     select(driver, area, scenario, time_period, stou_sp_median, 
            stou_sp_1q, stou_sp_3q, utos_sp_median, utos_sp_1q, utos_sp_3q) %>%
@@ -195,11 +195,11 @@ species_periods_tosave <- species_periods %>%
            "Local intensity of N2P\n(% of species, median)" = utos_sp_median, 
            "Local intensity of N2P\n(% of species, Q1)" = utos_sp_1q,
            "Local intensity of N2P\n(% of species, Q3)" = utos_sp_3q)
-write.csv(species_periods_tosave, file.path(tbl_dir, "supplementary_table3.csv"), 
+write.csv(species_periods_tosave, file.path(tbl_dir, "supplementary_table4.csv"), 
           row.names = FALSE)
 rm(species_periods_tosave)
 
-##### Extended Data Table 2 ####
+##### Extended Data Table 3 ####
 # Across variable groups: temperature, precipitation and land cover
 area_vals <- areas_periods %>% filter(area == "Global") %>% 
     mutate(group = as.integer(str_extract(driver, "[0-9]+"))) %>% 
@@ -264,7 +264,7 @@ rbind(area_vals, species_vals) %>%
            border.bottom = fp_border(color = "gray")) %>% 
     border(i = 6, j = 2:12, 
            border.bottom = fp_border(color = "gray")) %>%
-    save_as_image(file.path(fig_dir, "extended_data_table2.png"), res = 500)
+    save_as_image(file.path(fig_dir, "extended_data_table3.png"), res = 500)
 
 # Clean a bit
 rm(area_vals, species_vals, nms_in_order); gc()
@@ -292,6 +292,14 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
         
         if (ssp == "SSP126" & tp == "2041-2070"){
             xlims2 <- c(-55, 68)
+        }
+        
+        if (ssp == "SSP585" & tp == "2071-2100"){
+            xlims1 <- c(-100, 105)
+        }
+        
+        if (ssp == "SSP585" & tp == "2041-2070"){
+            xlims1 <- c(-100, 100)
         }
         
         area_pts_all <- areas_periods %>% 
@@ -334,7 +342,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                           label = sprintf("%.0f%s", utos_percent, "%")), 
                       color = 'black', size = 2.7, family = "Merriweather", 
                       hjust = 1) +
-            annotate(geom = "text", y = c(xlims1[1] + 15, xlims1[2] - 15), 
+            annotate(geom = "text", y = c(xlims1[1] * 0.8, xlims1[2] * 0.8), 
                      x = c(2, 2), 
                      label = c("\U2190N2P", "P2N\U2192"), fontface = "bold",
                      family = "Merriweather", color = "black", size = 2.5) +
@@ -362,16 +370,20 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
             mutate(area_p2n = factor(
                 area_p2n, levels = c("Low_p2n", "Middle_p2n", "High_p2n")))
         
+        fill_max <- max(area_regions_pts$stou_percent, 
+                        area_regions_pts$utos_percent)
         g2 <- ggplot(area_regions_pts) +
             geom_tile(aes(x = area_n2p, y = driver, fill = utos_percent),
                       color = "white") + 
             scale_fill_bs5(name = "N2P turnover\n(%)", "green",
-                           guide = guide_colorbar(order = 1)) +
+                           guide = guide_colorbar(order = 1), 
+                           limits = c(0, fill_max)) +
             new_scale_fill() +
             geom_tile(aes(x = area_p2n, y = driver, fill = stou_percent),
                       color = "white") + 
             scale_fill_bs5(name = "P2N turnover\n(%)", "orange",
-                           guide = guide_colorbar(order = 2)) +
+                           guide = guide_colorbar(order = 2),
+                           limits = c(0, fill_max)) +
             scale_x_discrete(labels = rep(c("L", "M", "H"), 2)) +
             geom_vline(xintercept = 3.5, color = 'black', linewidth = 1) +
             labs(x = "", y = "") + ggtitle(titles[2]) + coord_equal() +
@@ -446,7 +458,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                                           utos_sp_1q, utos_sp_3q, "%")), 
                       color = 'black', size = 2.7, family = "Merriweather", 
                       hjust = 1) +
-            annotate(geom = "text", y = c(xlims2[1] + 10, xlims2[2] - 10), 
+            annotate(geom = "text", y = c(xlims2[1] * 0.8, xlims2[2] * 0.8), 
                      x = c(2, 2), 
                      label = c("\U2190N2P", "P2N\U2192"), fontface = "bold",
                      family = "Merriweather", color = "black", size = 2.5) +
@@ -474,16 +486,21 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
             mutate(area_p2n = factor(
                 area_p2n, levels = c("Low_p2n", "Middle_p2n", "High_p2n")))
         
+        fill_max <- max(species_regions_pts$stou_sp_median, 
+                        species_regions_pts$utos_sp_median)
+        
         g3 <- ggplot(species_regions_pts) +
             geom_tile(aes(x = area_n2p, y = driver, fill = stou_sp_median),
                       color = "white") + 
             scale_fill_bs5(name = "N2P turnover\n(%)", "green",
-                           guide = guide_colorbar(order = 1)) +
+                           guide = guide_colorbar(order = 1),
+                           limits = c(0, fill_max)) +
             new_scale_fill() +
             geom_tile(aes(x = area_p2n, y = driver, fill = utos_sp_median),
                       color = "white") + 
             scale_fill_bs5(name = "P2N turnover\n(%)", "orange",
-                           guide = guide_colorbar(order = 2)) +
+                           guide = guide_colorbar(order = 2),
+                           limits = c(0, fill_max)) +
             scale_x_discrete(labels = rep(c("L", "M", "H"), 2)) +
             geom_vline(xintercept = 3.5, color = 'black', linewidth = 1) +
             labs(x = "", y = "") + ggtitle(titles[4]) + coord_equal() +
@@ -519,12 +536,16 @@ img <- image_read(file.path(fig_dir, "fig2_flow.png"))
 g <- image_ggplot(img, interpolate = TRUE)
 
 ggarrange(g, NULL, figs[[2]][[2]][[1]], figs[[2]][[2]][[2]], 
-          nrow = 4, heights = c(1.2, 0.2, 3, 3))
+          nrow = 4, heights = c(1.5, 0.1, 5, 5),
+          labels = c("(a)", "", "", ""),
+          font.label = list(
+              size = 11, color = "black", 
+              face = "bold", family = "Merriweather"))
 
 ggsave(file.path(fig_dir, "Figure2_global_patterns.png"), 
-       width = 6.5, height = 7.5, dpi = 500, bg = "white")
+       width = 6.5, height = 7, dpi = 500, bg = "white")
 
-###### Extended Data Fig.2 ####
+###### Extended Data Fig.3 ####
 
 figs <- do.call(c, figs)
 
@@ -534,10 +555,10 @@ plotlist <- lapply(names(figs), function(x) {
     } else figs[[x]]$area})
 ggarrange(plotlist = plotlist, nrow = 3, ncol = 3)
 
-ggsave(file.path(fig_dir, "extended_data_fig2.png"), 
+ggsave(file.path(fig_dir, "extended_data_fig3.png"), 
        width = 18, height = 11, dpi = 500, bg = "white")
 
-###### Extended Data Fig.3 ####
+###### Extended Data Fig.4 ####
 
 plotlist <- lapply(names(figs), function(x) {
     if (x == "ssp370.2041-2070"){
@@ -545,5 +566,8 @@ plotlist <- lapply(names(figs), function(x) {
     } else figs[[x]]$intensity})
 ggarrange(plotlist = plotlist, nrow = 3, ncol = 3)
 
-ggsave(file.path(fig_dir, "extended_data_fig3.png"), 
+ggsave(file.path(fig_dir, "extended_data_fig4.png"), 
        width = 18, height = 11, dpi = 500, bg = "white")
+
+# Clean up
+rm(list = ls()); gc()

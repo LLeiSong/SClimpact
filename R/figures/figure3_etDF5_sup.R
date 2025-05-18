@@ -182,7 +182,7 @@ for (tp in time_periods){
             fname <- file.path(fig_dir, sprintf("figure3_spatial_%s.png", i))
         } else {
             fname <- file.path(
-                fig_dir, sprintf("extended_data_fig4_%s_%s.png", i, tp))
+                fig_dir, sprintf("extended_data_fig5_%s_%s.png", i, tp))
         }
         
         ggsave(fname, width = 6.5, height = 3.4, dpi = 500)
@@ -196,24 +196,36 @@ figs <- do.call(c, lapply(fnames, image_read))
 fig <- image_append(figs, stack = TRUE)
 image_write(fig, file.path(fig_dir, "figure3_spatial.png"))
 
-##### Extended Data Fig.4 ####
+# Clean up
+fnames <- list.files(
+    fig_dir, pattern = "figure3_spatial", full.names = TRUE)
+fnames <- fnames[!str_detect(fnames, "figure3_spatial.png")]
+file.remove(fnames)
+
+##### Extended Data Fig.5 ####
 for (tp in c("2011-2040", "2071-2100")){
     fnames <- file.path(
-        fig_dir, c(sprintf("extended_data_fig4_%s_%s.png", 1:2, tp)))
+        fig_dir, c(sprintf("extended_data_fig5_%s_%s.png", 1:2, tp)))
     
     figs <- do.call(c, lapply(fnames, image_read))
     fig <- image_append(figs, stack = TRUE)
     image_write(
-        fig, file.path(fig_dir, sprintf("extended_data_fig4_%s.png", tp)))
+        fig, file.path(fig_dir, sprintf("extended_data_fig5_%s.png", tp)))
 }
 
 # Append again
 fnames <- file.path(
-    fig_dir, sprintf("extended_data_fig4_%s.png", 
+    fig_dir, sprintf("extended_data_fig5_%s.png", 
                      c("2011-2040", "2071-2100")))
 figs <- do.call(c, lapply(fnames, image_read))
 fig <- image_append(figs)
-image_write(fig, file.path(fig_dir, "extended_data_fig4.png"))
+image_write(fig, file.path(fig_dir, "extended_data_fig5.png"))
+
+# Clean up
+fnames <- list.files(
+    fig_dir, pattern = "extended_data_fig5", full.names = TRUE)
+fnames <- fnames[!str_detect(fnames, "extended_data_fig5.png")]
+file.remove(fnames)
 
 #### Supplementary Figure ####
 driver_to_plots <- c(
@@ -253,11 +265,12 @@ for (tp in time_periods){
                 lyrs <- trim(lyrs)
                 
                 means <- mean(lyrs, na.rm = TRUE)
-                sds <- stdev(lyrs, na.rm = TRUE, pop = TRUE)
+                ranges <- range(lyrs, na.rm = TRUE)
+                ranges <- ranges$range_max - ranges$range_min
                 
                 # Put values into data.frame
-                data <- as.data.frame(c(means, sds), xy = TRUE)
-                names(data) <- c("x", "y", "Mean", "SD")
+                data <- as.data.frame(c(means, ranges), xy = TRUE)
+                names(data) <- c("x", "y", "Mean", "Range")
                 
                 data %>% mutate(time_period = time_period)
             })
@@ -281,11 +294,12 @@ for (tp in time_periods){
                 lyrs <- trim(lyrs)
                 
                 means <- mean(lyrs, na.rm = TRUE)
-                sds <- stdev(lyrs, na.rm = TRUE, pop = TRUE)
+                ranges <- range(lyrs, na.rm = TRUE)
+                ranges <- ranges$range_max - ranges$range_min
                 
                 # Put values into data.frame
-                data <- as.data.frame(c(means, sds), xy = TRUE)
-                names(data) <- c("x", "y", "Mean", "SD")
+                data <- as.data.frame(c(means, ranges), xy = TRUE)
+                names(data) <- c("x", "y", "Mean", "Range")
                 
                 data %>% mutate(time_period = time_period)
             })
@@ -295,10 +309,10 @@ for (tp in time_periods){
             
             ## Convert values to biviariates
             values_bivi <- bi_class(
-                values_periods, x = Mean, y = SD, 
+                values_periods, x = Mean, y = Range, 
                 style = "fisher", dim = 4, dig_lab = 4)
             breaks <- bi_class_breaks(
-                values_periods, x = Mean, y = SD, style = "fisher", 
+                values_periods, x = Mean, y = Range, style = "fisher", 
                 dim = 4, dig_lab = 4, split = TRUE)
             breaks$bi_x <- round(breaks$bi_x, 0)
             breaks$bi_y <- round(breaks$bi_y, 0)
@@ -310,7 +324,7 @@ for (tp in time_periods){
                           rotate_pal = FALSE,
                           dim = 4,
                           xlab = "Mean (%)",
-                          ylab = "SD (%)",
+                          ylab = "Range (%)",
                           breaks = breaks,
                           pad_width = 0.3,
                           size = 6) +
@@ -323,9 +337,9 @@ for (tp in time_periods){
                         axis.text.x = element_text(
                             angle = -45, vjust = 0.5, hjust = 0),
                         axis.title.x = element_text(
-                            margin = margin(t = -23, unit = "mm")),
+                            margin = margin(t = -26, unit = "mm")),
                         axis.title.y = element_text(
-                            margin = margin(r = -16, unit = "mm"))))
+                            margin = margin(r = -26, unit = "mm"))))
             
             values <- values_bivi %>% filter(time_period == tp)
             rm(values_bivi, values_periods); gc()
@@ -384,3 +398,6 @@ for (tp in time_periods){
         rm(figs); gc()
     }
 }
+
+# Clean up
+rm(list = ls()); gc()
