@@ -517,7 +517,7 @@ for (driver in features){
                               axis.line = element_blank(),
                               plot.title = element_text(
                                   hjust = 0.5, family = "Merriweather",
-                                  size = 8, margin = margin(0, 0, -16, 0))))
+                                  size = 8, margin = margin(0, 0, 0, 0))))
                 
                 lgd <- ggplotGrob(
                     bi_legend(
@@ -543,9 +543,9 @@ for (driver in features){
                             plot.background = element_rect(fill='transparent', 
                                                            color = NA),
                             axis.title.x = element_text(
-                                margin = margin(t = -15, unit = "mm")),
+                                margin = margin(t = -10, unit = "mm")),
                             axis.title.y = element_text(
-                                margin = margin(r = -45, unit = "mm")),
+                                margin = margin(r = -40, unit = "mm")),
                             panel.grid.major = element_blank(),
                             panel.grid.minor = element_blank(),
                             panel.border = element_blank(),
@@ -579,13 +579,13 @@ for (driver in features){
                               margin = margin(0, 0, -5, 0)))
             })
             
-            ggarrange(plotlist = figs, nrow = 2)
+            ggarrange(plotlist = figs, ncol = 2)
             
             name <- file.path(
                 fig_dir, sprintf("Figure_s_shift_%s_%s_%s.png", 
                                  nm, ssp, time_period))
             
-            ggsave(name, width = 6, height = 6.5, dpi = 500)
+            ggsave(name, width = 12, height = 3.3, dpi = 500)
         }
     }
 }

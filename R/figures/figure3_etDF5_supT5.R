@@ -124,7 +124,7 @@ write.csv(magnitude_periods_tosave, file.path(tbl_dir, "supplementary_table5.csv
           row.names = FALSE)
 rm(magnitude_periods_tosave)
 
-#### Figure 4 and Extended Data Fig.6 ####
+#### Figure 3 and Extended Data Fig.5 ####
 
 # Parameter setting
 ssp <- "ssp370"
@@ -293,7 +293,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
     figs
 }); names(figs) <- ssps
 
-##### Figure 4 ####
+##### Figure 3 ####
 img <- image_read(file.path(fig_dir, "fig4_flow.png"))
 g <- image_ggplot(img, interpolate = TRUE)
 
@@ -316,7 +316,7 @@ ggarrange(g,
               size = 11, color = "black", 
               face = "bold", family = "Merriweather"))
 
-ggsave(file.path(fig_dir, "Figure4_global_patterns.png"), 
+ggsave(file.path(fig_dir, "Figure3_global_patterns.png"), 
        width = 6.5, height = 4, dpi = 500, bg = "white")
 
 ##### Extended Data Fig.6 ####
@@ -350,5 +350,5 @@ figs <- do.call(c, figs)
 
 ggarrange(plotlist = figs, nrow = 3, ncol = 3)
 
-ggsave(file.path(fig_dir, "extended_data_fig6.png"), 
+ggsave(file.path(fig_dir, "extended_data_fig5.png"), 
        width = 18, height = 11, dpi = 500, bg = "white")

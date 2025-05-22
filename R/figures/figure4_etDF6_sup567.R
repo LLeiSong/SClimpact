@@ -1,7 +1,7 @@
 # Load settings
 source("R/figures/setting.R")
 
-#### Figure 3 and Extended Data Fig.4 ####
+#### Figure 4 and Extended Data Fig.6 ####
 # Here we care about bio1 and bio5. bio12, and bio14.
 # Use two as a group, otherwise RAM will explode.
 driver_to_plots <- list(c("bio1", "bio5"), c("bio12", "bio14"))
@@ -190,41 +190,41 @@ for (tp in time_periods){
     }
 }
 
-##### Figure 3 ####
-fnames <- file.path(fig_dir, sprintf("figure3_spatial_%s.png", 1:2))
+##### Figure 4 ####
+fnames <- file.path(fig_dir, sprintf("figure4_spatial_%s.png", 1:2))
 figs <- do.call(c, lapply(fnames, image_read))
 fig <- image_append(figs, stack = TRUE)
-image_write(fig, file.path(fig_dir, "figure3_spatial.png"))
+image_write(fig, file.path(fig_dir, "figure4_spatial.png"))
 
 # Clean up
 fnames <- list.files(
-    fig_dir, pattern = "figure3_spatial", full.names = TRUE)
-fnames <- fnames[!str_detect(fnames, "figure3_spatial.png")]
+    fig_dir, pattern = "figure4_spatial", full.names = TRUE)
+fnames <- fnames[!str_detect(fnames, "figure4_spatial.png")]
 file.remove(fnames)
 
 ##### Extended Data Fig.5 ####
 for (tp in c("2011-2040", "2071-2100")){
     fnames <- file.path(
-        fig_dir, c(sprintf("extended_data_fig5_%s_%s.png", 1:2, tp)))
+        fig_dir, c(sprintf("extended_data_fig6_%s_%s.png", 1:2, tp)))
     
     figs <- do.call(c, lapply(fnames, image_read))
     fig <- image_append(figs, stack = TRUE)
     image_write(
-        fig, file.path(fig_dir, sprintf("extended_data_fig5_%s.png", tp)))
+        fig, file.path(fig_dir, sprintf("extended_data_fig6_%s.png", tp)))
 }
 
 # Append again
 fnames <- file.path(
-    fig_dir, sprintf("extended_data_fig5_%s.png", 
+    fig_dir, sprintf("extended_data_fig6_%s.png", 
                      c("2011-2040", "2071-2100")))
 figs <- do.call(c, lapply(fnames, image_read))
 fig <- image_append(figs)
-image_write(fig, file.path(fig_dir, "extended_data_fig5.png"))
+image_write(fig, file.path(fig_dir, "extended_data_fig6.png"))
 
 # Clean up
 fnames <- list.files(
-    fig_dir, pattern = "extended_data_fig5", full.names = TRUE)
-fnames <- fnames[!str_detect(fnames, "extended_data_fig5.png")]
+    fig_dir, pattern = "extended_data_fig6", full.names = TRUE)
+fnames <- fnames[!str_detect(fnames, "extended_data_fig6.png")]
 file.remove(fnames)
 
 #### Supplementary Figure ####
