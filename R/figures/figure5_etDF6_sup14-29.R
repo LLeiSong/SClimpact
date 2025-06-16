@@ -280,20 +280,20 @@ for (time_period in time_periods){
     name <- ifelse(
         time_period == "2041-2070", 
         file.path(fig_dir, "Figure5_spatial_shift.png"),
-        file.path(fig_dir, sprintf("extended_data_fig7_%s.png", time_period)))
+        file.path(fig_dir, sprintf("extended_data_fig6_%s.png", time_period)))
     
     ggsave(name, width = 6, height = 6.5, dpi = 500)
 }
 
-#### Extended Data Fig.7 ####
+#### Extended Data Fig.6 ####
 fnames <- file.path(
-    fig_dir, c(sprintf("extended_data_fig7_%s.png", 
+    fig_dir, c(sprintf("extended_data_fig6_%s.png", 
                        c("2011-2040", "2071-2100"))))
 
 figs <- do.call(c, lapply(fnames, image_read))
 fig <- image_append(figs)
 image_write(
-    fig, file.path(fig_dir, "extended_data_fig7.png"))
+    fig, file.path(fig_dir, "extended_data_fig6.png"))
 
 # Clean up
 file.remove(fnames); rm(ssp, drivers, s, figs, fig, fnames)

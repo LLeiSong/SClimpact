@@ -388,6 +388,7 @@ en_max_fig <- sp_turnovers_fig %>%
 
 en_max_fig %>% mutate(Species = sprintf(" %s ", Species)) %>% 
     flextable() %>% autofit() %>% 
+    bg(bg = "white", part = "all") %>% 
     align(align = "left", part = "all") %>% 
     bold(part = "header") %>% 
     font(fontname = "Merriweather", part = "all") %>% 
@@ -417,6 +418,7 @@ en_max_fig <- sp_shifts_fig %>%
 
 en_max_fig %>% mutate(Species = sprintf(" %s ", Species)) %>% 
     flextable() %>% autofit() %>% 
+    bg(bg = "white", part = "all") %>% 
     align(align = "left", part = "all") %>% 
     align(i = 1, j = 4, align = "center", part = "header") %>% 
     bold(part = "header") %>% 

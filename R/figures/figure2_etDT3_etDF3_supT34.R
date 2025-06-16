@@ -249,6 +249,7 @@ rbind(area_vals, species_vals) %>%
     rename("Type" = type, "Turnover" = turnover, 
            "Variable\ngroup" = group) %>% 
     flextable() %>% separate_header(split = "_") %>% 
+    bg(bg = "white", part = "all") %>% 
     autofit() %>% align(align = "center", part = "all") %>% 
     font(fontname = "Merriweather", part = "all") %>% 
     bold(part = "header") %>% 
@@ -269,18 +270,15 @@ rbind(area_vals, species_vals) %>%
 # Clean a bit
 rm(area_vals, species_vals, nms_in_order); gc()
 
-##### Figure 2 and Extended Data Fig.2-3 ####
+##### Figure 2 and Extended Data Fig.3 ####
 figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
     figs <- lapply(time_periods, function(tp){
         if (ssp == "SSP370" & tp == "2041-2070"){
-            titles <- c("(b) Global area", "(c) Area by region", 
-                        "(d) Local intensity", "(e) Intensity by region")
+            titles <- c("(b) Global area", "(c) Local intensity")
         } else{
             titles <- c(
                 sprintf("(%s %s)\nGlobal area", tolower(ssp), tp), 
-                sprintf("(%s %s)\nArea by region", tolower(ssp), tp),
-                sprintf("(%s %s)\nLocal intensity", tolower(ssp), tp), 
-                sprintf("(%s %s)\nIntensity by region", tolower(ssp), tp))}
+                sprintf("(%s %s)\nLocal intensity", tolower(ssp), tp))}
         
         if (tp == "2071-2100"){
             xlims1 <- c(-100, 101)
@@ -312,7 +310,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                 driver == "grassland", "GRA", driver))
         
         # Get the driver rank for visualization
-        drivers <- area_pts_all %>% filter(area == "Global") %>% 
+        a_drivers <- area_pts_all %>% filter(area == "Global") %>% 
             mutate(stou_rank = rank(-stou_percent), 
                    utos_rank = rank(-utos_percent)) %>% 
             mutate(SqRank = (stou_rank^2) + (utos_rank^2)/2) %>% 
@@ -321,88 +319,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
         
         area_pts <- area_pts_all %>% filter(area == "Global") %>% 
             mutate(driver = factor(
-                driver, levels = drivers$driver, labels = drivers$driver))
-        
-        g1 <- ggplot() + 
-            geom_col(data = area_pts, 
-                     color = "white", fill = "#a6611a",
-                     aes(x = driver, y = stou_percent)) +
-            geom_col(data = area_pts,
-                     aes(x = driver, y = -utos_percent), 
-                     color = "white", fill = "#018571") +
-            # text for suitable to unsuitable
-            geom_text(data = area_pts, 
-                      aes(x = driver, y = stou_percent + 1, 
-                          label = sprintf("%.0f%s", stou_percent, "%")), 
-                      color = 'black', size = 2.7, family = "Merriweather", 
-                      hjust = 0) +
-            # text for unsuitable to suitable
-            geom_text(data = area_pts, 
-                      aes(x = driver, y = -utos_percent - 1, 
-                          label = sprintf("%.0f%s", utos_percent, "%")), 
-                      color = 'black', size = 2.7, family = "Merriweather", 
-                      hjust = 1) +
-            annotate(geom = "text", y = c(xlims1[1] * 0.8, xlims1[2] * 0.8), 
-                     x = c(2, 2), 
-                     label = c("\U2190N2P", "P2N\U2192"), fontface = "bold",
-                     family = "Merriweather", color = "black", size = 2.5) +
-            labs(x = "", y = "") + ggtitle(titles[1]) + coord_flip() + 
-            scale_y_continuous(labels = function(x){paste0(abs(x), "%")},
-                               limits = xlims1) +
-            geom_hline(yintercept = 0, color = 'black', linewidth = 1) +
-            theme_pubclean(base_family = "Merriweather", base_size = 11) +
-            theme(panel.grid.major.y = element_line(color = "white"),
-                  panel.grid.major.x = element_line(
-                      linetype = "dotted", color = "lightgrey"),
-                  axis.text.y = element_text(color = "black"),
-                  plot.title = element_text(
-                      family = "Merriweather", size = 11,
-                      face = "bold", hjust = 0.5),
-                  plot.margin = unit(c(0, 0, 0, 0), "cm"))
-        
-        # By regions
-        area_regions_pts <- area_pts_all %>% filter(area != "Global") %>% 
-            mutate(driver = factor(
-                driver, levels = drivers$driver, labels = drivers$driver)) %>%
-            mutate(area_p2n = paste0(area, "_p2n"), area_n2p = area) %>% 
-            mutate(area_n2p = factor(
-                area_n2p, levels = c("Low", "Middle", "High"))) %>% 
-            mutate(area_p2n = factor(
-                area_p2n, levels = c("Low_p2n", "Middle_p2n", "High_p2n")))
-        
-        fill_max <- max(area_regions_pts$stou_percent, 
-                        area_regions_pts$utos_percent)
-        g2 <- ggplot(area_regions_pts) +
-            geom_tile(aes(x = area_n2p, y = driver, fill = utos_percent),
-                      color = "white") + 
-            scale_fill_bs5(name = "N2P turnover\n(%)", "green",
-                           guide = guide_colorbar(order = 1), 
-                           limits = c(0, fill_max)) +
-            new_scale_fill() +
-            geom_tile(aes(x = area_p2n, y = driver, fill = stou_percent),
-                      color = "white") + 
-            scale_fill_bs5(name = "P2N turnover\n(%)", "orange",
-                           guide = guide_colorbar(order = 2),
-                           limits = c(0, fill_max)) +
-            scale_x_discrete(labels = rep(c("L", "M", "H"), 2)) +
-            geom_vline(xintercept = 3.5, color = 'black', linewidth = 1) +
-            labs(x = "", y = "") + ggtitle(titles[2]) + coord_equal() +
-            theme_pubclean(base_family = "Merriweather", base_size = 11) +
-            theme(panel.grid.major.y = element_line(color = "white"),
-                  axis.text.y = element_text(color = "black"),
-                  legend.position = "right", 
-                  legend.direction = "vertical",
-                  legend.text = element_text(size = 8),
-                  legend.title = element_text(size = 8),
-                  legend.key.height = unit(3, "mm"),
-                  legend.key.width = unit(2, "mm"),
-                  plot.title = element_text(
-                      family = "Merriweather", size = 11,
-                      face = "bold", hjust = 0.5),
-                  axis.text.x = element_text(color = "black"),
-                  plot.margin = unit(c(0, 0, 0, 0), "cm"))
-        
-        g1 <- ggarrange(g1, g2, ncol = 2)
+                driver, levels = a_drivers$driver, labels = a_drivers$driver))
         
         # Species
         species_pts_all <- species_periods %>% 
@@ -414,7 +331,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                 str_detect(driver, "bio") ~ toupper(driver)))
         
         # Get the driver rank for visualization
-        drivers <- species_pts_all %>% filter(area == "Global") %>% 
+        s_drivers <- species_pts_all %>% filter(area == "Global") %>% 
             mutate(stou_rank = rank(-stou_sp_median), 
                    utos_rank = rank(-utos_sp_median)) %>% 
             mutate(SqRank = (stou_rank^2) + (utos_rank^2) / 2) %>% 
@@ -423,7 +340,69 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
         
         species_pts <- species_pts_all %>% filter(area == "Global") %>% 
             mutate(driver = factor(
-                driver, levels = drivers$driver, labels = drivers$driver))
+                driver, levels = s_drivers$driver, labels = s_drivers$driver))
+        
+        # Get the changes between these two
+        ord_change <- data.frame(
+            area = a_drivers$driver, intensity = s_drivers$driver) %>% 
+            mutate(area_order = 1:nrow(.))
+        
+        a_cols <- lapply(1:nrow(ord_change), function(i){
+            ord_change %>% slice(i) %>% 
+                mutate(intensity_order = which(ord_change$intensity == .$area))
+        }) %>% bind_rows() %>% 
+            mutate(change = intensity_order - area_order)
+        
+        a_cols <- ifelse(a_cols$change >= 0, "#1d3557", "#e63946")
+        
+        # Plots
+        g1 <- ggplot() + 
+            geom_col(data = area_pts, 
+                     color = "white", fill = "#a6611a",
+                     aes(x = driver, y = stou_percent)) +
+            geom_col(data = area_pts,
+                     aes(x = driver, y = -utos_percent), 
+                     color = "white", fill = "#018571") +
+            # text for suitable to unsuitable
+            geom_text(data = area_pts, 
+                      aes(x = driver, y = stou_percent + 1, 
+                          label = sprintf("%.0f%s", stou_percent, "%")), 
+                      color = 'black', size = 2.5, family = "Merriweather", 
+                      hjust = 0) +
+            # text for unsuitable to suitable
+            geom_text(data = area_pts, 
+                      aes(x = driver, y = -utos_percent - 1, 
+                          label = sprintf("%.0f%s", utos_percent, "%")), 
+                      color = 'black', size = 2.5, family = "Merriweather", 
+                      hjust = 1) +
+            annotate(geom = "text", y = c(xlims1[1] * 0.8, xlims1[2] * 0.8), 
+                     x = c(2, 2), 
+                     label = c("\U2190N2P", "P2N\U2192"), fontface = "bold",
+                     family = "Merriweather", color = "black", size = 2.5) +
+            labs(x = "", y = "% of terrestrial area") + 
+            ggtitle(titles[1]) + coord_flip() + 
+            scale_y_continuous(labels = function(x){paste0(abs(x), "%")},
+                               limits = xlims1) +
+            scale_x_discrete(position = "top") +
+            geom_hline(yintercept = 0, color = 'black', linewidth = 1) +
+            theme_pubclean(base_family = "Merriweather", base_size = 11) +
+            theme(panel.grid.major.y = element_line(color = "white"),
+                  panel.grid.major.x = element_line(
+                      linetype = "dotted", color = "lightgrey"),
+                  axis.text.x = element_text(color = "black"),
+                  axis.text.y = element_text(color = a_cols),
+                  plot.title = element_text(
+                      family = "Merriweather", size = 11,
+                      face = "bold", hjust = 0.5),
+                  plot.margin = unit(c(0.1, -0.3, 0.1, 0.5), "cm"))
+        
+        s_cols <- lapply(1:nrow(ord_change), function(i){
+            ord_change %>% slice(i) %>% 
+                mutate(intensity_order = which(ord_change$area == .$intensity))
+        }) %>% bind_rows() %>% 
+            mutate(change = intensity_order - area_order)
+        
+        s_cols <- ifelse(s_cols$change > 0, "#e63946", "#1d3557")
         
         g2 <- ggplot() + 
             geom_col(data = species_pts, 
@@ -449,20 +428,21 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                       aes(x = driver, y = stou_sp_3q + 1, 
                           label = sprintf("%.0f-%.0f%s", 
                                           stou_sp_1q, stou_sp_3q, "%")), 
-                      color = 'black', size = 2.7, family = "Merriweather", 
+                      color = 'black', size = 2.5, family = "Merriweather", 
                       hjust = 0) +
             # text for unsuitable to suitable
             geom_text(data = species_pts, 
                       aes(x = driver, y = -utos_sp_3q - 1, 
                           label = sprintf("%.0f-%.0f%s", 
                                           utos_sp_1q, utos_sp_3q, "%")), 
-                      color = 'black', size = 2.7, family = "Merriweather", 
+                      color = 'black', size = 2.5, family = "Merriweather", 
                       hjust = 1) +
             annotate(geom = "text", y = c(xlims2[1] * 0.8, xlims2[2] * 0.8), 
                      x = c(2, 2), 
                      label = c("\U2190N2P", "P2N\U2192"), fontface = "bold",
                      family = "Merriweather", color = "black", size = 2.5) +
-            labs(x = "", y = "") + ggtitle(titles[3]) + coord_flip() + 
+            labs(x = "", y = "% of species") + 
+            ggtitle(titles[2]) + coord_flip() + 
             scale_y_continuous(labels = function(x){paste0(abs(x), "%")},
                                limits = xlims2) +
             geom_hline(yintercept = 0, color = 'black', linewidth = 1) +
@@ -470,59 +450,44 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
             theme(panel.grid.major.y = element_line(color = "white"),
                   panel.grid.major.x = element_line(
                       linetype = "dotted", color = "lightgrey"),
-                  axis.text.y = element_text(color = "black"),
+                  axis.text.x = element_text(color = "black"),
+                  axis.text.y = element_text(color = s_cols),
                   plot.title = element_text(
                       family = "Merriweather", size = 11,
                       face = "bold", hjust = 0.5),
-                  plot.margin = unit(c(0, 0, 0, 0), "cm"))
+                  plot.margin = unit(c(0.1, 0.5, 0.1, -0.2), "cm"))
         
-        # By regions
-        species_regions_pts <- species_pts_all %>% filter(area != "Global") %>% 
-            mutate(driver = factor(
-                driver, levels = drivers$driver, labels = drivers$driver)) %>%
-            mutate(area_p2n = paste0(area, "_p2n"), area_n2p = area) %>% 
-            mutate(area_n2p = factor(
-                area_n2p, levels = c("Low", "Middle", "High"))) %>% 
-            mutate(area_p2n = factor(
-                area_p2n, levels = c("Low_p2n", "Middle_p2n", "High_p2n")))
+        dirs <- lapply(1:nrow(ord_change), function(i){
+            ord_change %>% slice(i) %>% 
+                mutate(intensity_order = which(ord_change$intensity == .$area))
+        }) %>% bind_rows() %>% 
+            mutate(area = factor(
+                area, levels = area, labels = area))
         
-        fill_max <- max(species_regions_pts$stou_sp_median, 
-                        species_regions_pts$utos_sp_median)
+        d_cols <- ifelse(a_cols == "black", "#1d3557", a_cols)
         
-        g3 <- ggplot(species_regions_pts) +
-            geom_tile(aes(x = area_n2p, y = driver, fill = stou_sp_median),
-                      color = "white") + 
-            scale_fill_bs5(name = "N2P turnover\n(%)", "green",
-                           guide = guide_colorbar(order = 1),
-                           limits = c(0, fill_max)) +
-            new_scale_fill() +
-            geom_tile(aes(x = area_p2n, y = driver, fill = utos_sp_median),
-                      color = "white") + 
-            scale_fill_bs5(name = "P2N turnover\n(%)", "orange",
-                           guide = guide_colorbar(order = 2),
-                           limits = c(0, fill_max)) +
-            scale_x_discrete(labels = rep(c("L", "M", "H"), 2)) +
-            geom_vline(xintercept = 3.5, color = 'black', linewidth = 1) +
-            labs(x = "", y = "") + ggtitle(titles[4]) + coord_equal() +
+        g3 <- ggplot(dirs) + 
+            geom_point(aes(x = 0, y = area_order), 
+                       color = a_cols, size = 0.6) +
+            geom_point(aes(x = 1, y = intensity_order), 
+                       color = a_cols, size = 0.6) +
+            ggtitle(titles[1]) + labs(y = "", x = " ") + 
+            geom_segment(
+                aes(x = 0, y = area_order, 
+                    xend = 1, yend = intensity_order), 
+                color = d_cols) + 
             theme_pubclean(base_family = "Merriweather", base_size = 11) +
             theme(panel.grid.major.y = element_line(color = "white"),
-                  axis.text.y = element_text(color = "black"),
-                  legend.position = "right", 
-                  legend.direction = "vertical",
-                  legend.text = element_text(size = 8),
-                  legend.title = element_text(size = 8),
-                  legend.key.height = unit(3, "mm"),
-                  legend.key.width = unit(2, "mm"),
+                  panel.grid.major.x = element_line(color = "white"),
+                  axis.text.x = element_text(color = "white"),
+                  axis.ticks = element_blank(),
+                  axis.text.y = element_blank(),
                   plot.title = element_text(
                       family = "Merriweather", size = 11,
-                      face = "bold", hjust = 0.5),
-                  axis.text.x = element_text(color = "black"),
-                  plot.margin = unit(c(0, 0, 0, 0), "cm"))
+                      face = "bold", hjust = 0.5, color = "white"),
+                  plot.margin = unit(c(0, 0, 0, -0.4), "cm"))
         
-        
-        g2 <- ggarrange(g2, g3, ncol = 2)
-        
-        list("area" = g1, "intensity" = g2)
+        ggarrange(g1, g3, g2, nrow = 1, widths = c(4, 0.8, 4))
     })
     
     # Add name
@@ -535,15 +500,15 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
 img <- image_read(file.path(fig_dir, "fig2_flow.png"))
 g <- image_ggplot(img, interpolate = TRUE)
 
-ggarrange(g, NULL, figs[[2]][[2]][[1]], figs[[2]][[2]][[2]], 
-          nrow = 4, heights = c(1.5, 0.1, 5, 5),
-          labels = c("(a)", "", "", ""),
+ggarrange(g, NULL, figs[[2]][[2]], 
+          nrow = 3, heights = c(1.5, 0.1, 5),
+          labels = c("\n(a)", "", ""),
           font.label = list(
               size = 11, color = "black", 
               face = "bold", family = "Merriweather"))
 
 ggsave(file.path(fig_dir, "Figure2_global_patterns.png"), 
-       width = 6.5, height = 7, dpi = 500, bg = "white")
+       width = 6.5, height = 4.6, dpi = 500, bg = "white")
 
 ###### Extended Data Fig.3 ####
 
@@ -552,21 +517,10 @@ figs <- do.call(c, figs)
 plotlist <- lapply(names(figs), function(x) {
     if (x == "ssp370.2041-2070"){
         NULL
-    } else figs[[x]]$area})
+    } else figs[[x]]})
 ggarrange(plotlist = plotlist, nrow = 3, ncol = 3)
 
 ggsave(file.path(fig_dir, "extended_data_fig3.png"), 
-       width = 18, height = 11, dpi = 500, bg = "white")
-
-###### Extended Data Fig.4 ####
-
-plotlist <- lapply(names(figs), function(x) {
-    if (x == "ssp370.2041-2070"){
-        NULL
-    } else figs[[x]]$intensity})
-ggarrange(plotlist = plotlist, nrow = 3, ncol = 3)
-
-ggsave(file.path(fig_dir, "extended_data_fig4.png"), 
        width = 18, height = 11, dpi = 500, bg = "white")
 
 # Clean up
