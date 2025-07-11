@@ -170,8 +170,8 @@ areas_periods_tosave <- areas_periods %>%
     mutate(area = ifelse(
         area == "Global", area, paste(area, "altitude"))) %>% as_tibble() %>% 
     rename("Variable" = driver, "Region" = area, "Scenario" = scenario,
-           "Time period" = time_period, "Global area of P2N (%)" = stou_percent,
-           "Global area of N2P (%)" = utos_percent)
+           "Time period" = time_period, "Global area of unfavoring turnover(%)" = stou_percent,
+           "Global area of favoring turnover(%)" = utos_percent)
 write.csv(areas_periods_tosave, file.path(tbl_dir, "supplementary_table3.csv"), 
           row.names = FALSE)
 rm(areas_periods_tosave)
@@ -190,8 +190,8 @@ species_periods_tosave <- species_periods %>%
     rename("Variable" = driver, "Region" = area, "Scenario" = scenario,
            "Time period" = time_period, 
            "Local intensity of P2N\n(% of species, median)" = stou_sp_median,
-           "Local intensity of of P2N\n(% of species, Q1)" = stou_sp_1q,
-           "Local intensity of of P2N\n(% of species, Q3)" = stou_sp_3q,
+           "Local intensity of P2N\n(% of species, Q1)" = stou_sp_1q,
+           "Local intensity of P2N\n(% of species, Q3)" = stou_sp_3q,
            "Local intensity of N2P\n(% of species, median)" = utos_sp_median, 
            "Local intensity of N2P\n(% of species, Q1)" = utos_sp_1q,
            "Local intensity of N2P\n(% of species, Q3)" = utos_sp_3q)
@@ -245,6 +245,8 @@ nms_in_order <- lapply(time_periods, function(x) {
 
 rbind(area_vals, species_vals) %>% 
     arrange(type, turnover, group) %>% 
+    mutate(turnover = ifelse(turnover == "N2P", "Favoring",
+                             "Unfavoring")) %>% 
     select(all_of(c("type", "turnover", "group", nms_in_order))) %>% 
     rename("Type" = type, "Turnover" = turnover, 
            "Variable\ngroup" = group) %>% 
@@ -497,11 +499,11 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
 
 ###### Figure 2 ####
 
-img <- image_read(file.path(fig_dir, "fig2_flow.png"))
+img <- image_read(file.path(fig_dir, "fig2_flow.jpg"))
 g <- image_ggplot(img, interpolate = TRUE)
 
 ggarrange(g, NULL, figs[[2]][[2]], 
-          nrow = 3, heights = c(1.5, 0.1, 5),
+          nrow = 3, heights = c(2.1, 0.1, 5),
           labels = c("\n(a)", "", ""),
           font.label = list(
               size = 11, color = "black", 

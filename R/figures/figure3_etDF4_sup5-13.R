@@ -46,13 +46,13 @@ figs_regs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
         ggplot(species_regions_pts) +
             geom_tile(aes(x = driver, y = area_n2p, fill = stou_sp_median),
                       color = "white") + 
-            scale_fill_bs5(name = "N2P (%)", "green",
+            scale_fill_bs5(name = "Favoring (%)", "green",
                            guide = guide_colorbar(order = 1),
                            limits = c(0, fill_max)) +
             new_scale_fill() +
             geom_tile(aes(x = driver, y = area_p2n, fill = utos_sp_median),
                       color = "white") + 
-            scale_fill_bs5(name = "P2N (%)", "orange",
+            scale_fill_bs5(name = "Unfavoring (%)", "orange",
                            guide = guide_colorbar(order = 2),
                            limits = c(0, fill_max)) +
             scale_y_discrete(labels = rep(c("L", "M", "H"), 2)) +

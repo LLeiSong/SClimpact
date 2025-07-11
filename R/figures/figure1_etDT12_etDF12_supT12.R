@@ -182,7 +182,7 @@ p1 <- ggplot(data = sp_turnovers_fig %>% filter(type == "P to N")) +
     geom_boxplot(aes(x = plot_order, y = perct), 
                  fill = "#a6611a", outliers = FALSE, 
                  fatten = 1, show.legend = FALSE) +
-    new_scale_fill() + ggtitle("P2N turnover") +
+    new_scale_fill() + ggtitle("Unfavoring turnover") +
     geom_point(data = en_fig %>% filter(type == "P to N"), 
                aes(x = plot_order, y = perct, fill = significance), 
                size = 1.6, shape = 21, color = "white", stroke = 0.2) +
@@ -207,7 +207,7 @@ p2 <- ggplot(data = sp_turnovers_fig %>% filter(type == "N to P")) +
     geom_boxplot(aes(x = plot_order, y = perct), 
                  fill = "#018571", outliers = FALSE, 
                  fatten = 1, show.legend = FALSE) +
-    new_scale_fill() + ggtitle("N2P turnover") +
+    new_scale_fill() + ggtitle("Favoring turnover") +
     geom_point(data = en_fig %>% filter(type == "N to P"), 
                aes(x = plot_order, y = perct, fill = significance), 
                size = 1.6, shape = 21, color = "white", stroke = 0.2) +
@@ -347,19 +347,21 @@ p3 <- ggplot(data = sp_shifts_fig %>% filter(type == "N")) +
 p2 <- ggarrange(p2, p3, ncol = 2, common.legend = TRUE, legend = "none")
 
 # Make a label
-lgd <- ggplot(data = sp_turnovers_fig) +
+lgd <- ggplot() +
     geom_point(data = en_fig, 
                aes(x = plot_order, y = median, color = significance), 
                size = 1.6) +
-    scale_color_manual(" Median of endangered species ", values = cols$colors) +
+    scale_color_manual(name = " Median of endangered species ", 
+                       values = cols$colors) +
     theme_pubclean(base_family = "Merriweather", base_size = 11) + 
     theme(legend.position = "bottom",
           legend.text = element_text(size = 10),
           legend.title = element_text(size = 10))
 
-lgd <- as_ggplot(get_legend(lgd))
+lgd <- as_ggplot(
+    get_plot_component(lgd, 'guide-box-bottom', return_all = TRUE))
 
-img <- image_read(file.path(fig_dir, "fig1_flow.png"))
+img <- image_read(file.path(fig_dir, "fig1_flow.jpg"))
 g <- image_ggplot(img, interpolate = TRUE)
 
 ggarrange(g, p1, lgd, p2, nrow = 4, ncol = 1,
@@ -367,7 +369,7 @@ ggarrange(g, p1, lgd, p2, nrow = 4, ncol = 1,
           font.label = list(
               size = 11, color = "black", 
               face = "bold", family = "Merriweather"),
-          heights = c(2, 5, 0.8, 5))
+          heights = c(2.8, 5, 0.8, 5))
 
 ggsave(file.path(fig_dir, "Figure1_driver_species.png"), 
        width = 6.5, height = 7.7, dpi = 500, bg = "white")
@@ -384,7 +386,7 @@ en_max_fig <- sp_turnovers_fig %>%
     ungroup() %>% select(type, feature, sp, perct, category) %>% 
     mutate(perct = round(perct, 2)) %>% 
     rename("Variable" = feature, "Turnover" = type, "Species" = sp, 
-           "Area (% of habitat)" = perct, "IUCN category" = category)
+           "Area (% of \ndispersable-habitat)" = perct, "IUCN category" = category)
 
 en_max_fig %>% mutate(Species = sprintf(" %s ", Species)) %>% 
     flextable() %>% autofit() %>% 
@@ -491,8 +493,9 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
             g <- ggplot(data = sp_analysis_fig) +
                 geom_boxplot(aes(x = plot_order, y = perct, fill = type), 
                              outliers = FALSE, fatten = 1, coef = 0) +
-                scale_fill_manual("Turnover", values = c("#018571", '#a6611a'),
-                                  labels = c("N2P turnover", "P2N turnover")) +
+                scale_fill_manual(
+                    "Turnover", values = c("#018571", '#a6611a'),
+                    labels = c("Favoring turnover", "Unfavoring turnover")) +
                 new_scale_fill() +
                 geom_point(data = en_fig, 
                            aes(x = plot_order, y = perct, fill = significance), 
@@ -506,9 +509,9 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
                 xlab("") + ylab("") + 
                 facet_wrap(
                     ~factor(type, levels = c("P to N", "N to P"),
-                            labels = c(sprintf("(%s %s)\nP2N turnover", 
+                            labels = c(sprintf("(%s %s)\nUnfavoring turnover", 
                                                ssp, time_period), 
-                                       sprintf("(%s %s)\nN2P turnover", 
+                                       sprintf("(%s %s)\nFavoring turnover", 
                                                ssp, time_period))),
                     scales = "free") +
                 theme(axis.text = element_text(color = "black"),
@@ -525,7 +528,7 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
                       legend.title = element_text(size = 13)) +
                 guides(fill = guide_legend(override.aes = list(size = 6)))
             
-            as_ggplot(get_legend(g))
+            as_ggplot(ggpubr::get_legend(g))
         } else {
             ggplot(data = sp_analysis_fig) +
                 geom_boxplot(aes(x = plot_order, y = perct, fill = type), 
@@ -546,9 +549,9 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
                 xlab("") + ylab("") + 
                 facet_wrap(
                     ~factor(type, levels = c("P to N", "N to P"),
-                            labels = c(sprintf("(%s %s)\nP2N turnover", 
+                            labels = c(sprintf("(%s %s)\nUnfavoring turnover", 
                                                ssp, time_period), 
-                                       sprintf("(%s %s)\nN2P turnover", 
+                                       sprintf("(%s %s)\nFavoring turnover", 
                                                ssp, time_period))),
                     scales = "free") +
                 theme(axis.text = element_text(color = "black"),
