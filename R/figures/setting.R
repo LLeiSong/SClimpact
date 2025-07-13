@@ -26,11 +26,9 @@ library(officer)
 library(parallel)
 library(colorspace)
 library(cowplot)
-font_add_google('Merriweather')
-showtext_auto()
-showtext_opts(dpi = 500)
 sf_use_s2(FALSE)
 mask <- terra::mask
+get_legend <- ggpubr::get_legend
 
 #### Model evaluation ####
 root_dir <- here()
@@ -103,3 +101,13 @@ rm(mid_lines, high_lines)
 bry <- ne_countries(scale = "medium") %>%
     filter(continent != "Antarctica") %>%
     st_union() %>% st_transform(plot_crs)
+
+#### Variable groups ####
+grps <- data.frame(var = paste0("BIO", c(1, 5, 9, 3, 4, 2, 8, 7)),
+                   group = "Temperature", color = "#e66101") %>% 
+    rbind(data.frame(var = paste0("BIO", c(14, 12, 15, 18, 19)),
+                     group = "Precipitation", color = "#072ac8")) %>% 
+    rbind(data.frame(var = c("FOR", "HLU", "GRA"),
+                     group = "Land cover", color = "#1c2541")) %>% 
+    mutate(group = factor(
+        group, levels = c("Temperature", "Precipitation", "Land cover")))

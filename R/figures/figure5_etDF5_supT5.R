@@ -155,24 +155,14 @@ shift_pts <- shift_pts %>%
         labels = c("Baseline-favorable area", "Baseline-unfavorable area"))) %>%
     mutate(driver = factor(driver, levels = drivers, labels = drivers))
 
-# variable groups
-grps <- data.frame(var = paste0("BIO", c(1, 5, 9, 3, 4, 2, 8, 7)),
-                   group = "Temperature", color = "#e63946") %>% 
-    rbind(data.frame(var = paste0("BIO", c(14, 12, 15, 18, 19)),
-                     group = "Precipitation", color = "#1d3557")) %>% 
-    rbind(data.frame(var = c("FOR", "HLU", "GRA"),
-                     group = "Land cover", color = "#fb8500")) %>% 
-    mutate(group = factor(group, levels = c("Temperature", "Precipitation", "Land cover")))
-
 # Make all figures
 figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
     figs <- lapply(time_periods, function(tp){
         if (ssp == "SSP370" & tp == "2041-2070"){
-            titles <- c("(b) Magnitude shift", "(c) Shift by region")
+            titles <- c("(b) Favorability shift", "(c) Shift by region")
         } else{
-            titles <- c(
-                sprintf("(%s %s)\nMagnitude shift", tolower(ssp), tp), 
-                sprintf("(%s %s)\nShift by region", tolower(ssp), tp))}
+            titles <- c("Favorability shift", "Shift by region")
+        }
         
         shift_pts <- magnitude_periods %>% filter(area == "Global") %>% 
             filter(scenario == toupper(ssp) & time_period == tp) %>% 
@@ -226,11 +216,11 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
             labs(y = "\u2206 SHAP",
                  x = element_blank()) +
             scale_y_continuous(expand = expansion(mult = 0.01)) +
-            theme_pubclean(base_size = 11, base_family = 'Merriweather') +
+            theme_pubclean(base_size = 12) +
             theme(axis.text = element_text(
                 color = "black"),
                 axis.text.y = element_text(color = a_cols),
-                legend.text = element_text(size = 8),
+                legend.text = element_text(size = 9),
                 panel.grid.major.y = element_blank(),
                 panel.grid.major.x = element_line(
                     linetype = "dotted", color = "lightgrey"),
@@ -240,8 +230,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                 legend.spacing = unit(rep(0), "cm"),
                 plot.margin = unit(c(0, 0.5, 0.2, 0.5), "cm"),
                 plot.title = element_text(
-                    family = "Merriweather", size = 11,
-                    face = "bold", hjust = 0.5))
+                    size = 12, face = "italic", hjust = 0.5))
         
         # By regions
         shift_region_pts <- magnitude_periods %>% filter(area != "Global") %>% 
@@ -283,17 +272,16 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
             scale_x_discrete(labels = rep(c("L", "M", "H"), 2)) +
             geom_vline(xintercept = 3.5, color = 'black', linewidth = 1) +
             labs(x = "Region", y = "") + coord_equal() + ggtitle(titles[2]) +
-            theme_pubclean(base_family = "Merriweather", base_size = 11) +
+            theme_pubclean(base_size = 12) +
             theme(panel.grid.major.y = element_line(color = "white"),
                   axis.text = element_text(color = "black"),
                   axis.text.y = element_text(color = a_cols),
-                  plot.title = element_text(
-                      family = "Merriweather", size = 11,
-                      face = "bold", hjust = 0.5),
+                  plot.title = element_text(size = 12,
+                      face = "italic", hjust = 0.5),
                   legend.position = "right", 
                   legend.direction = "vertical",
-                  legend.text = element_text(size = 8),
-                  legend.title = element_text(size = 8),
+                  legend.text = element_text(size = 9),
+                  legend.title = element_text(size = 9),
                   legend.key.height = unit(3, "mm"),
                   legend.key.width = unit(2, "mm"),
                   plot.margin = unit(c(0, 0, 0.2, 0), "cm"))
@@ -306,8 +294,8 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
     figs
 }); names(figs) <- ssps
 
-##### Figure 4 ####
-img <- image_read(file.path(fig_dir, "fig4_flow.jpg"))
+##### Figure 5 ####
+img <- image_read(file.path(fig_dir, "fig5_flow.jpg"))
 g <- image_ggplot(img, interpolate = TRUE)
 
 ggarrange(g,
@@ -316,16 +304,16 @@ ggarrange(g,
           ggarrange(figs[[2]][[2]][[1]] + 
                         annotate(
                             geom = "text", y = 0.04, 
-                            x = 7, label = "Temperature", color = "#e63946", 
-                            family = "Merriweather", size = 3) +
+                            x = 7, label = "Temperature", color = "#e66101", 
+                            size = 3.5) +
                         annotate(
                             geom = "text", y = 0.04, x = 5.5, 
-                            label = "Precipitation", color = "#1d3557", 
-                            family = "Merriweather", size = 3) +
+                            label = "Precipitation", color = "#072ac8", 
+                            size = 3.5) +
                         annotate(
                             geom = "text", y = 0.04, x = 4, 
-                            label = "Landcover", color = "#fb8500", 
-                            family = "Merriweather", size = 3) +
+                            label = "Landcover", color = "#1c2541", 
+                            size = 3.5) +
                         theme(legend.position = "none", 
                               plot.title = element_blank(),
                               plot.margin = unit(c(0, 0.2, 0.2, 0.8), "cm")), 
@@ -333,55 +321,65 @@ ggarrange(g,
                         theme(plot.title = element_blank()), ncol = 2, 
                     labels = c("(b)", "(c)"),
                     font.label = list(
-                        size = 11, color = "black", 
-                        face = "bold", family = "Merriweather")), 
+                        size = 12, color = "black", 
+                        face = "bold")), 
           nrow = 3, heights = c(4.2, 1, 10),
           labels = c("(a)", ""),
           font.label = list(
-              size = 11, color = "black", 
-              face = "bold", family = "Merriweather"))
+              size = 12, color = "black", 
+              face = "bold"))
 
-ggsave(file.path(fig_dir, "Figure4_shifts.png"), 
+ggsave(file.path(fig_dir, "Figure5_shifts.png"), 
        width = 6.5, height = 4.4, dpi = 500, bg = "white")
 
 ##### Extended Data Fig.5 ####
 
+lgd <- ggplot() + 
+    geom_point(aes(x = 0:2, y = c(0, 0, 1.2)), 
+               color = "transparent") +
+    annotation_custom(
+        ggplotGrob(as_ggplot(
+            get_legend(
+                figs[[2]][[2]][[1]] + 
+                    theme(legend.text = element_text(size = 15))))), 
+        xmin = 0, xmax = 2, ymin = 0, ymax = 0.7) +
+    annotate(
+        geom = "text", y = 1, 
+        x = 0.5, label = "Temperature", color = "#e66101", 
+        size = 5) +
+    annotate(
+        geom = "text", y = 1, x = 1, 
+        label = "Precipitation", color = "#072ac8", 
+        size = 5) +
+    annotate(
+        geom = "text", y = 1, x = 1.5, 
+        label = "Landcover", color = "#1c2541", 
+        size = 5) + theme_void()
+
+inds <- c(letters[1:5], letters[5:8])
 figs <- lapply(ssps, function(ssp){
     figs <- lapply(time_periods, function(time_period){
         
+        id1 <- which(c("2011-2040", "2041-2070", "2071-2100") == time_period)
+        id2 <- which(c("ssp126", "ssp370", "ssp585") == ssp)
+        ind <- inds[(id2 - 1) * 3 + id1]
+        
         if (ssp == "ssp370" & time_period == "2041-2070"){
-            texts <- ggplot() + 
-                geom_point(aes(x = rep(1, 3), y = 1:3), color = "white",
-                           show.legend = FALSE) + 
-                annotate(
-                geom = "text", y = 2.5, 
-                x = 1, label = "Temperature", color = "#e63946", 
-                family = "Merriweather", size = 5) +
-                annotate(
-                    geom = "text", y = 2, x = 1, 
-                    label = "Precipitation", color = "#1d3557", 
-                    family = "Merriweather", size = 5) +
-                annotate(
-                    geom = "text", y = 1.5, x = 1, 
-                    label = "Landcover", color = "#fb8500", 
-                    family = "Merriweather", size = 5) +
-                theme_void()
-            
-            ggarrange(as_ggplot(ggpubr::get_legend(
-                figs[[ssp]][[time_period]][[1]] +
-                    theme(legend.position = "left",
-                          legend.text = element_text(size = 13),
-                          legend.title = element_text(size = 13)) +
-                    guides(
-                        color = guide_legend(
-                            override.aes = list(size = 4, linewidth = 2))))),
-                texts, nrow = 2)
+            NULL
         } else {
             g1 <- figs[[ssp]][[time_period]][[1]] +
-                theme(legend.position = "none")
+                theme(legend.position = "none",
+                      plot.margin = unit(c(0.1, 0, 0.2, 0), "cm"))
             g2 <- figs[[ssp]][[time_period]][[2]]
             
-            ggarrange(g1, g2, ncol = 2)
+            ggarrange(g1, g2, ncol = 2) +
+                ggtitle(sprintf("%s. %s, %s", ind, ssp, time_period))
+            
+            annotate_figure(ggarrange(g1, g2, ncol = 2),
+                            top = text_grob(
+                                sprintf("%s. %s, %s", ind, ssp, time_period),
+                                face = "bold",
+                                size = 12))
         }
     })
     
@@ -390,11 +388,13 @@ figs <- lapply(ssps, function(ssp){
 }); names(figs) <- ssps
 
 figs <- do.call(c, figs)
+figs <- figs[!sapply(figs, is.null)]
 
-ggarrange(plotlist = figs, nrow = 3, ncol = 3)
+ggarrange(ggarrange(plotlist = figs, nrow = 4, ncol = 2), lgd, nrow = 2,
+          heights = c(12, 0.5))
 
 ggsave(file.path(fig_dir, "extended_data_fig5.png"), 
-       width = 18, height = 11, dpi = 500, bg = "white")
+       width = 11, height = 13, dpi = 500, bg = "white")
 
 # Clean up
 rm(list = ls()); gc()

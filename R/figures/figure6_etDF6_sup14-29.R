@@ -21,8 +21,14 @@ for (time_period in time_periods){
         if (time_period == "2041-2070"){
             plot_title <- sprintf(
                 "(%s) %s over %s area", letters[1:2][drivers == driver], nm, lb)
+        } else if (time_period == "2011-2040"){
+            plot_title <- sprintf(
+                "%s. %s (over %s area %s)", 
+                letters[1:2][drivers == driver], nm, lb, time_period)
         } else {
-            plot_title <- sprintf("%s (over %s area %s)", nm, lb, time_period)
+            plot_title <- sprintf(
+                "%s. %s (over %s area %s)", 
+                letters[3:4][drivers == driver], nm, lb, time_period)
         }
         
         # Load layers
@@ -119,9 +125,9 @@ for (time_period in time_periods){
                 padding = unit(c(1, 2), "mm"),
                 colnames.style = colnames_style(
                     size = 8, fill = "transparent", parse = TRUE, 
-                    face = "plain", font = "Merriweather"),
+                    face = "plain"),
                 tbody.style = tbody_style(
-                    size = 8, color = "black", font = "Merriweather", 
+                    size = 8, color = "black", 
                     fill = colors)))
         
         ## Visualization
@@ -194,13 +200,13 @@ for (time_period in time_periods){
                        fill = bi_class)) +
                 geom_col(width = 1, color = "white", linewidth = 0.2) +
                 geom_text(x = 0, y = 0, label = 0, 
-                          size = 2, family = "Merriweather") +
+                          size = 2) +
                 geom_text(x = 0.5, y = 1, label = round(nums[1], 0), 
-                          size = 2, family = "Merriweather") +
+                          size = 2) +
                 geom_text(x = 0.5, y = 1.8, label = round(nums[2], 0), 
-                          size = 2, family = "Merriweather") +
+                          size = 2) +
                 geom_text(x = 0.5, y = 2.5, label = round(nums[3], 0), 
-                          size = 2, family = "Merriweather") +
+                          size = 2) +
                 scale_alpha_manual("", values = c(1.0, 0.7, 0.4)) +
                 ggtitle("Species richness") +
                 scale_fill_manual(
@@ -212,8 +218,8 @@ for (time_period in time_periods){
                       panel.border = element_blank(),
                       axis.line = element_blank(),
                       plot.title = element_text(
-                          hjust = 0.5, family = "Merriweather",
-                          size = 8, margin = margin(0, 0, -16, 0))))
+                          hjust = 0.5, 
+                          size = 8, margin = margin(0, 0, 0, 0))))
         
         lgd <- ggplotGrob(
             bi_legend(
@@ -232,16 +238,16 @@ for (time_period in time_periods){
                                   xmin = 0.4, xmax = 2.8,
                                   ymin = 0.4, ymax = 2.8) +
                 theme(axis.text = element_text(
-                    size = 8, color = "black", family = 'Merriweather'),
+                    size = 8, color = "black"),
                     axis.title = element_text(
-                        size = 8, color = "black", family = 'Merriweather'),
+                        size = 8, color = "black"),
                     panel.background = element_rect(fill='transparent'),
                     plot.background = element_rect(fill='transparent', 
                                                    color = NA),
                     axis.title.x = element_text(
-                        margin = margin(t = -15, unit = "mm")),
+                        margin = margin(t = 1, unit = "mm")),
                     axis.title.y = element_text(
-                        margin = margin(r = -45, unit = "mm")),
+                        margin = margin(r = 0, unit = "mm")),
                     panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank(),
                     panel.border = element_blank(),
@@ -270,7 +276,7 @@ for (time_period in time_periods){
             theme_void() + 
             theme(plot.margin = unit(c(-1, -0.4, 0.1, -0.4), "cm"),
                   plot.title = element_text(
-                      family = "Merriweather", size = 10,
+                      size = 11,
                       face = "bold", hjust = 0.5,
                       margin = margin(0, 0, -5, 0)))
     })
@@ -279,7 +285,7 @@ for (time_period in time_periods){
     
     name <- ifelse(
         time_period == "2041-2070", 
-        file.path(fig_dir, "Figure5_spatial_shift.png"),
+        file.path(fig_dir, "Figure6_spatial_shift.png"),
         file.path(fig_dir, sprintf("extended_data_fig6_%s.png", time_period)))
     
     ggsave(name, width = 6, height = 6.5, dpi = 500)
@@ -423,9 +429,9 @@ for (driver in features){
                         padding = unit(c(1, 2), "mm"),
                         colnames.style = colnames_style(
                             size = 8, fill = "transparent", parse = TRUE, 
-                            face = "plain", font = "Merriweather"),
+                            face = "plain"),
                         tbody.style = tbody_style(
-                            size = 8, color = "black", font = "Merriweather", 
+                            size = 8, color = "black", 
                             fill = colors)))
                 
                 ## Visualization
@@ -498,13 +504,13 @@ for (driver in features){
                                fill = bi_class)) +
                         geom_col(width = 1, color = "white", linewidth = 0.2) +
                         geom_text(x = 0, y = 0, label = 0, 
-                                  size = 2, family = "Merriweather") +
+                                  size = 2) +
                         geom_text(x = 0.5, y = 1, label = round(nums[1], 0), 
-                                  size = 2, family = "Merriweather") +
+                                  size = 2) +
                         geom_text(x = 0.5, y = 1.8, label = round(nums[2], 0), 
-                                  size = 2, family = "Merriweather") +
+                                  size = 2) +
                         geom_text(x = 0.5, y = 2.5, label = round(nums[3], 0), 
-                                  size = 2, family = "Merriweather") +
+                                  size = 2) +
                         scale_alpha_manual("", values = c(1.0, 0.7, 0.4)) +
                         ggtitle("Species richness") +
                         scale_fill_manual(
@@ -516,7 +522,7 @@ for (driver in features){
                               panel.border = element_blank(),
                               axis.line = element_blank(),
                               plot.title = element_text(
-                                  hjust = 0.5, family = "Merriweather",
+                                  hjust = 0.5, 
                                   size = 8, margin = margin(0, 0, 0, 0))))
                 
                 lgd <- ggplotGrob(
@@ -536,16 +542,16 @@ for (driver in features){
                                           xmin = 0.4, xmax = 2.8,
                                           ymin = 0.4, ymax = 2.8) +
                         theme(axis.text = element_text(
-                            size = 8, color = "black", family = 'Merriweather'),
+                            size = 8, color = "black"),
                             axis.title = element_text(
-                                size = 8, color = "black", family = 'Merriweather'),
+                                size = 8, color = "black"),
                             panel.background = element_rect(fill='transparent'),
                             plot.background = element_rect(fill='transparent', 
                                                            color = NA),
                             axis.title.x = element_text(
-                                margin = margin(t = -10, unit = "mm")),
+                                margin = margin(t = 1, unit = "mm")),
                             axis.title.y = element_text(
-                                margin = margin(r = -40, unit = "mm")),
+                                margin = margin(r = 0, unit = "mm")),
                             panel.grid.major = element_blank(),
                             panel.grid.minor = element_blank(),
                             panel.border = element_blank(),
@@ -574,7 +580,7 @@ for (driver in features){
                     theme_void() + 
                     theme(plot.margin = unit(c(-1, -0.4, 0.1, -0.4), "cm"),
                           plot.title = element_text(
-                              family = "Merriweather", size = 10,
+                              size = 11,
                               face = "bold", hjust = 0.5,
                               margin = margin(0, 0, -5, 0)))
             })

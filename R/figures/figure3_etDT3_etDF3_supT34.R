@@ -170,7 +170,7 @@ areas_periods_tosave <- areas_periods %>%
     mutate(area = ifelse(
         area == "Global", area, paste(area, "altitude"))) %>% as_tibble() %>% 
     rename("Variable" = driver, "Region" = area, "Scenario" = scenario,
-           "Time period" = time_period, "Global area of unfavoring turnover(%)" = stou_percent,
+           "Time period" = time_period, "Global area of disfavoring turnover(%)" = stou_percent,
            "Global area of favoring turnover(%)" = utos_percent)
 write.csv(areas_periods_tosave, file.path(tbl_dir, "supplementary_table3.csv"), 
           row.names = FALSE)
@@ -189,12 +189,12 @@ species_periods_tosave <- species_periods %>%
         area == "Global", area, paste(area, "altitude"))) %>% as_tibble() %>% 
     rename("Variable" = driver, "Region" = area, "Scenario" = scenario,
            "Time period" = time_period, 
-           "Local intensity of P2N\n(% of species, median)" = stou_sp_median,
-           "Local intensity of P2N\n(% of species, Q1)" = stou_sp_1q,
-           "Local intensity of P2N\n(% of species, Q3)" = stou_sp_3q,
-           "Local intensity of N2P\n(% of species, median)" = utos_sp_median, 
-           "Local intensity of N2P\n(% of species, Q1)" = utos_sp_1q,
-           "Local intensity of N2P\n(% of species, Q3)" = utos_sp_3q)
+           "Local intensity of disfavoring\n(% of species, median)" = stou_sp_median,
+           "Local intensity of disfavoring\n(% of species, Q1)" = stou_sp_1q,
+           "Local intensity of disfavoring\n(% of species, Q3)" = stou_sp_3q,
+           "Local intensity of favoring\n(% of species, median)" = utos_sp_median, 
+           "Local intensity of favoring\n(% of species, Q1)" = utos_sp_1q,
+           "Local intensity of favoring\n(% of species, Q3)" = utos_sp_3q)
 write.csv(species_periods_tosave, file.path(tbl_dir, "supplementary_table4.csv"), 
           row.names = FALSE)
 rm(species_periods_tosave)
@@ -246,14 +246,13 @@ nms_in_order <- lapply(time_periods, function(x) {
 rbind(area_vals, species_vals) %>% 
     arrange(type, turnover, group) %>% 
     mutate(turnover = ifelse(turnover == "N2P", "Favoring",
-                             "Unfavoring")) %>% 
+                             "Disfavoring")) %>% 
     select(all_of(c("type", "turnover", "group", nms_in_order))) %>% 
     rename("Type" = type, "Turnover" = turnover, 
            "Variable\ngroup" = group) %>% 
     flextable() %>% separate_header(split = "_") %>% 
     bg(bg = "white", part = "all") %>% 
     autofit() %>% align(align = "center", part = "all") %>% 
-    font(fontname = "Merriweather", part = "all") %>% 
     bold(part = "header") %>% 
     bold(i = c(3, 6), j = 3:12) %>% 
     bold(i = 7, j = c(4, 10)) %>% bold(i = 9, j = c(5:9, 11:12)) %>% 
@@ -272,15 +271,17 @@ rbind(area_vals, species_vals) %>%
 # Clean a bit
 rm(area_vals, species_vals, nms_in_order); gc()
 
-##### Figure 2 and Extended Data Fig.3 ####
+##### Figure 3 and Extended Data Fig.3 ####
 figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
     figs <- lapply(time_periods, function(tp){
         if (ssp == "SSP370" & tp == "2041-2070"){
             titles <- c("(b) Global area", "(c) Local intensity")
+            lb_size <- 2
+            title_font <- "bold"
         } else{
-            titles <- c(
-                sprintf("(%s %s)\nGlobal area", tolower(ssp), tp), 
-                sprintf("(%s %s)\nLocal intensity", tolower(ssp), tp))}
+            lb_size <- 2.5
+            title_font <- "italic"
+            titles <- c("Global area", "Local intensity")}
         
         if (tp == "2071-2100"){
             xlims1 <- c(-100, 101)
@@ -355,7 +356,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
         }) %>% bind_rows() %>% 
             mutate(change = intensity_order - area_order)
         
-        a_cols <- ifelse(a_cols$change >= 0, "#1d3557", "#e63946")
+        a_cols <- ifelse(a_cols$change >= 0, "#1d3557", "#e66101")
         
         # Plots
         g1 <- ggplot() + 
@@ -369,33 +370,33 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
             geom_text(data = area_pts, 
                       aes(x = driver, y = stou_percent + 1, 
                           label = sprintf("%.0f%s", stou_percent, "%")), 
-                      color = 'black', size = 2.5, family = "Merriweather", 
-                      hjust = 0) +
+                      color = 'black', size = 2.5, hjust = 0) +
             # text for unsuitable to suitable
             geom_text(data = area_pts, 
                       aes(x = driver, y = -utos_percent - 1, 
                           label = sprintf("%.0f%s", utos_percent, "%")), 
-                      color = 'black', size = 2.5, family = "Merriweather", 
+                      color = 'black', size = 2.5, 
                       hjust = 1) +
             annotate(geom = "text", y = c(xlims1[1] * 0.8, xlims1[2] * 0.8), 
                      x = c(2, 2), 
-                     label = c("\U2190N2P", "P2N\U2192"), fontface = "bold",
-                     family = "Merriweather", color = "black", size = 2.5) +
+                     label = c(paste0("\u2190", "Favoring"), 
+                               "Disfavoring\U2192"), 
+                     fontface = "bold", color = "black", size = lb_size) +
             labs(x = "", y = "% of terrestrial area") + 
             ggtitle(titles[1]) + coord_flip() + 
             scale_y_continuous(labels = function(x){paste0(abs(x), "%")},
                                limits = xlims1) +
             scale_x_discrete(position = "top") +
             geom_hline(yintercept = 0, color = 'black', linewidth = 1) +
-            theme_pubclean(base_family = "Merriweather", base_size = 11) +
+            theme_pubclean(base_size = 12) +
             theme(panel.grid.major.y = element_line(color = "white"),
                   panel.grid.major.x = element_line(
                       linetype = "dotted", color = "lightgrey"),
                   axis.text.x = element_text(color = "black"),
                   axis.text.y = element_text(color = a_cols),
                   plot.title = element_text(
-                      family = "Merriweather", size = 11,
-                      face = "bold", hjust = 0.5),
+                      size = 12,
+                      face = title_font, hjust = 0.5),
                   plot.margin = unit(c(0.1, -0.3, 0.1, 0.5), "cm"))
         
         s_cols <- lapply(1:nrow(ord_change), function(i){
@@ -404,7 +405,7 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
         }) %>% bind_rows() %>% 
             mutate(change = intensity_order - area_order)
         
-        s_cols <- ifelse(s_cols$change > 0, "#e63946", "#1d3557")
+        s_cols <- ifelse(s_cols$change > 0, "#e66101", "#1d3557")
         
         g2 <- ggplot() + 
             geom_col(data = species_pts, 
@@ -430,33 +431,31 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                       aes(x = driver, y = stou_sp_3q + 1, 
                           label = sprintf("%.0f-%.0f%s", 
                                           stou_sp_1q, stou_sp_3q, "%")), 
-                      color = 'black', size = 2.5, family = "Merriweather", 
-                      hjust = 0) +
+                      color = 'black', size = 2.5, hjust = 0) +
             # text for unsuitable to suitable
             geom_text(data = species_pts, 
                       aes(x = driver, y = -utos_sp_3q - 1, 
                           label = sprintf("%.0f-%.0f%s", 
                                           utos_sp_1q, utos_sp_3q, "%")), 
-                      color = 'black', size = 2.5, family = "Merriweather", 
-                      hjust = 1) +
+                      color = 'black', size = 2.5, hjust = 1) +
             annotate(geom = "text", y = c(xlims2[1] * 0.8, xlims2[2] * 0.8), 
                      x = c(2, 2), 
-                     label = c("\U2190N2P", "P2N\U2192"), fontface = "bold",
-                     family = "Merriweather", color = "black", size = 2.5) +
+                     label = c(paste0("\u2190", "Favoring"), 
+                               "Disfavoring\U2192"), 
+                     fontface = "bold", color = "black", size = lb_size) +
             labs(x = "", y = "% of species") + 
             ggtitle(titles[2]) + coord_flip() + 
             scale_y_continuous(labels = function(x){paste0(abs(x), "%")},
                                limits = xlims2) +
             geom_hline(yintercept = 0, color = 'black', linewidth = 1) +
-            theme_pubclean(base_family = "Merriweather", base_size = 11) +
+            theme_pubclean(base_size = 12) +
             theme(panel.grid.major.y = element_line(color = "white"),
                   panel.grid.major.x = element_line(
                       linetype = "dotted", color = "lightgrey"),
                   axis.text.x = element_text(color = "black"),
                   axis.text.y = element_text(color = s_cols),
                   plot.title = element_text(
-                      family = "Merriweather", size = 11,
-                      face = "bold", hjust = 0.5),
+                      size = 12, face = title_font, hjust = 0.5),
                   plot.margin = unit(c(0.1, 0.5, 0.1, -0.2), "cm"))
         
         dirs <- lapply(1:nrow(ord_change), function(i){
@@ -478,15 +477,14 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
                 aes(x = 0, y = area_order, 
                     xend = 1, yend = intensity_order), 
                 color = d_cols) + 
-            theme_pubclean(base_family = "Merriweather", base_size = 11) +
+            theme_pubclean(base_size = 12) +
             theme(panel.grid.major.y = element_line(color = "white"),
                   panel.grid.major.x = element_line(color = "white"),
                   axis.text.x = element_text(color = "white"),
                   axis.ticks = element_blank(),
                   axis.text.y = element_blank(),
-                  plot.title = element_text(
-                      family = "Merriweather", size = 11,
-                      face = "bold", hjust = 0.5, color = "white"),
+                  plot.title = element_text(size = 12,
+                      face = title_font, hjust = 0.5, color = "white"),
                   plot.margin = unit(c(0, 0, 0, -0.4), "cm"))
         
         ggarrange(g1, g3, g2, nrow = 1, widths = c(4, 0.8, 4))
@@ -497,33 +495,43 @@ figs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
     figs
 }); names(figs) <- ssps
 
-###### Figure 2 ####
+###### Figure 3 ####
 
-img <- image_read(file.path(fig_dir, "fig2_flow.jpg"))
+img <- image_read(file.path(fig_dir, "fig3_flow.jpg"))
 g <- image_ggplot(img, interpolate = TRUE)
 
 ggarrange(g, NULL, figs[[2]][[2]], 
-          nrow = 3, heights = c(2.1, 0.1, 5),
+          nrow = 3, heights = c(2.2, 0.1, 5),
           labels = c("\n(a)", "", ""),
           font.label = list(
-              size = 11, color = "black", 
-              face = "bold", family = "Merriweather"))
+              size = 12, color = "black", 
+              face = "bold"))
 
-ggsave(file.path(fig_dir, "Figure2_global_patterns.png"), 
+ggsave(file.path(fig_dir, "Figure3_global_patterns.png"), 
        width = 6.5, height = 4.6, dpi = 500, bg = "white")
 
 ###### Extended Data Fig.3 ####
-
 figs <- do.call(c, figs)
 
-plotlist <- lapply(names(figs), function(x) {
+inds <- c(letters[1:5], letters[5:8])
+plotlist <- lapply(1:length(figs), function(i) {
+    x <- names(figs)[i]
     if (x == "ssp370.2041-2070"){
         NULL
-    } else figs[[x]]})
-ggarrange(plotlist = plotlist, nrow = 3, ncol = 3)
+    } else {
+        figs[[x]] +
+            ggtitle(sprintf("%s. %s", inds[i], gsub("\\.", ", ", x))) +
+            theme(strip.text = element_text(face = "italic", size = 12),
+                  plot.title = element_text(
+                      face = "bold", size = 12, hjust = 0.5, 
+                      margin = margin(b = -5, t = 10)),)
+    }})
+
+plotlist <- plotlist[!sapply(plotlist, is.null)]
+ggarrange(plotlist = plotlist, nrow = 4, ncol = 2)
 
 ggsave(file.path(fig_dir, "extended_data_fig3.png"), 
-       width = 18, height = 11, dpi = 500, bg = "white")
+       width = 18, height = 12.5, dpi = 500, bg = "white")
 
 # Clean up
 rm(list = ls()); gc()

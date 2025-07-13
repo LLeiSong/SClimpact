@@ -46,10 +46,10 @@ tbl <- ggplotGrob(ggtexttable(
     theme = ttheme(
         padding = unit(c(1, 2), "mm"),
         colnames.style = colnames_style(
-            size = 8, fill = "transparent", parse = TRUE, 
-            face = "plain", font = "Merriweather"),
+            size = 10, fill = "transparent", parse = TRUE, 
+            face = "plain"),
         tbody.style = tbody_style(
-            size = 8, color = "black", font = "Merriweather"))))
+            size = 10, color = "black"))))
 
 g <- ggplot(data = evals %>% filter(type == "testing"), 
             aes(x = value, after_stat(density), fill = metric.eval)) +
@@ -57,8 +57,8 @@ g <- ggplot(data = evals %>% filter(type == "testing"),
     xlab("Metric value(0 - 1)") +
     ylab("Density") +
     scale_fill_brewer(name = "Metric", palette = "Dark2") +
-    theme_pubclean(base_size = 11, base_family = "Merriweather") +
-    theme(axis.text = element_text(color = "black", family = 'Merriweather'))
+    theme_pubclean(base_size = 12) +
+    theme(axis.text = element_text(color = "black"))
 
 ggarrange(g, tbl, nrow = 1, widths = c(0.7, 0.3))
 
@@ -82,10 +82,10 @@ for (sp in species_list) {
 }
 
 vars <- vars %>% mutate(ratio = num / length(species_list)) %>% 
-    mutate(var = ifelse(var == "forest", "Forest coverage",
-                        ifelse(var == "human_impact", "Human land use",
+    mutate(var = ifelse(var == "forest", "Forest coverage (FOR)",
+                        ifelse(var == "human_impact", "Human land use (HLU)",
                                gsub("bio", "BIO", var)))) %>% 
-    mutate(var = ifelse(var == "grassland", "Grassland", var)) %>% 
+    mutate(var = ifelse(var == "grassland", "Grassland (GRA)", var)) %>% 
     mutate(selected = ifelse(ratio > 0.1, "yes", "no")) %>% 
     mutate(var = fct_reorder(var, num))
 
@@ -99,17 +99,17 @@ ggplot(data = vars,
     geom_point() +
     scale_color_manual("", values = c("grey", "black")) +
     xlab("No. of species") + ylab("") +
-    theme_pubclean(base_size = 11, base_family = "Merriweather") +
+    theme_pubclean(base_size = 12) +
     theme(axis.text.x = element_text(
         color = "black"),
         axis.text.y = element_text(color = "black"),
-        axis.title = element_text(color = "black", size = 11),
+        axis.title = element_text(color = "black", size = 10),
         panel.grid.major.y = element_blank(),
         axis.title.x = element_text(vjust = -1),
         legend.position = "none")
 
 ggsave(file.path(fig_dir, "Figure_s_vars_selected.png"),
-       width = 4, height = 4.2, dpi = 500, bg = "white")
+       width = 4.5, height = 4, dpi = 500, bg = "white")
 
 #### SHAP: number of Monte Carlo iterations ####
 shaps <- lapply(species_list, function(sp){
@@ -131,7 +131,7 @@ ggplot(shaps_mean) +
                   color = "#EB5B00", width = 300) +
     xlab("Number of repetitions (nsim)") + 
     ylab("Correlation with\nSHAP values(sim = 10,000)") +
-    theme_pubclean(base_size = 11, base_family = "Merriweather") +
+    theme_pubclean(base_size = 12) +
     theme(axis.text.x = element_text(
         color = "black"),
         axis.text.y = element_text(color = "black"))

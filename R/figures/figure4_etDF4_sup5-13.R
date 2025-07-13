@@ -8,8 +8,17 @@ species_periods <- read.csv(
 
 figs_regs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
     figs <- lapply(time_periods, function(tp){
-        if (ssp == "SSP370" & tp == "2041-2070"){
-            titles <- "(a) Intensity by region"
+        if (ssp == "SSP370"){
+            if (tp == "2041-2070"){
+                titles <- "(a) Intensity by region"
+            } else if(tp == "2011-2040"){
+                titles <- sprintf(
+                    "a. Intensity by region (%s %s)", tolower(ssp), tp)
+            } else{
+                titles <- sprintf(
+                    "f. Intensity by region (%s %s)", tolower(ssp), tp)
+            }
+            
         } else{
             titles <- sprintf("Intensity by region (%s %s)", tolower(ssp), tp)}
         
@@ -52,26 +61,25 @@ figs_regs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
             new_scale_fill() +
             geom_tile(aes(x = driver, y = area_p2n, fill = utos_sp_median),
                       color = "white") + 
-            scale_fill_bs5(name = "Unfavoring (%)", "orange",
+            scale_fill_bs5(name = "Disfavoring (%)", "orange",
                            guide = guide_colorbar(order = 2),
                            limits = c(0, fill_max)) +
             scale_y_discrete(labels = rep(c("L", "M", "H"), 2)) +
             geom_hline(yintercept = 3.5, color = 'black', linewidth = 1) +
             labs(x = "", y = "") + ggtitle(titles) + 
-            theme_pubclean(base_family = "Merriweather", base_size = 11) +
+            theme_pubclean(base_size = 12) +
             theme(panel.grid.major.y = element_line(color = "white"),
-                  axis.text = element_text(color = "black"),
+                  axis.text = element_text(color = "black", size = 8),
                   legend.position = "right", 
                   legend.text = element_text(size = 8),
                   legend.title = element_text(size = 8),
-                  legend.key.height = unit(2.5, "mm"),
+                  legend.key.height = unit(2.3, "mm"),
                   legend.key.width = unit(1.8, "mm"),
                   legend.margin = margin(0, 0, -0.1, 0, unit = "cm"),
                   axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
                   plot.title = element_text(
-                      family = "Merriweather", size = 11,
-                      face = "bold", hjust = 0.5),
-                  plot.margin = unit(c(0.22, 0.2, -0.1, 0), "cm"))
+                      size = 12, face = "bold", hjust = 0.5),
+                  plot.margin = unit(c(0.24, 0.2, -0.2, 0), "cm"))
     })
     
     # Add name
@@ -93,7 +101,25 @@ for (time_period in time_periods){
             titles <- split(titles, ceiling(seq_along(titles) / 1))
             names(titles) <- driver_to_plots[[x]]
             titles})
-    } else titles_list <- NULL
+    } else if (time_period == "2011-2040"){
+        # This chunk is not very flexible, which only fit for this case.
+        titles <- letters[2:5]
+        titles_list <- split(titles, ceiling(seq_along(titles) / 2))
+        titles_list <- lapply(1:2, function(x){
+            titles <- titles_list[[x]]
+            titles <- split(titles, ceiling(seq_along(titles) / 1))
+            names(titles) <- driver_to_plots[[x]]
+            titles})
+    } else{
+        # This chunk is not very flexible, which only fit for this case.
+        titles <- letters[7:10]
+        titles_list <- split(titles, ceiling(seq_along(titles) / 2))
+        titles_list <- lapply(1:2, function(x){
+            titles <- titles_list[[x]]
+            titles <- split(titles, ceiling(seq_along(titles) / 1))
+            names(titles) <- driver_to_plots[[x]]
+            titles})
+    }
     
     figs <- lapply(1:length(driver_to_plots), function(i){
         driver_to_plot <- driver_to_plots[[i]]
@@ -144,21 +170,21 @@ for (time_period in time_periods){
                           flip_axes = FALSE,
                           rotate_pal = FALSE,
                           dim = 3,
-                          xlab = "P2N (%)",
-                          ylab = "N2P (%)",
+                          xlab = "Disfavoring (%)",
+                          ylab = "Favoring (%)",
                           breaks = breaks,
                           pad_width = 0.3,
                           size = 6) +
                     theme(axis.text = element_text(
-                        size = 6, color = "black", family = 'Merriweather'),
+                        size = 6, color = "black"),
                         axis.title = element_text(
-                            size = 6, color = "black", family = 'Merriweather'),
+                            size = 6, color = "black"),
                         panel.background = element_rect(fill='transparent'),
                         plot.background = element_rect(fill='transparent', color = NA),
                         axis.title.x = element_text(
-                            margin = margin(t = -12, unit = "mm")),
+                            margin = margin(t = 0.5, unit = "mm")),
                         axis.title.y = element_text(
-                            margin = margin(r = -26, unit = "mm"))))
+                            margin = margin(r = -1, unit = "mm"))))
             
             values <- values_bivi
             rm(values_bivi, values_periods); gc()
@@ -179,13 +205,14 @@ for (time_period in time_periods){
                                   ymin = -8642702, ymax = 3357298) +
                 theme_void() + 
                 ggtitle(ifelse(
-                    is.null(titles), 
-                    sprintf("%s (%s, %s)", toupper(driver), ssp, time_period), 
+                    time_period != "2041-2070", 
+                    sprintf("%s. %s (%s, %s)", 
+                            titles[[driver]][1], toupper(driver), ssp, time_period), 
                     sprintf("(%s) %s", titles[[driver]][1], toupper(driver)))) +
                 theme(plot.margin = unit(c(-0.2, -0.3, 0, -0.3), "cm"),
-                      plot.title = element_text(
-                          family = "Merriweather", size = 10,
-                          face = "bold", hjust = 0.5))
+                      plot.title = element_text(size = 12,
+                          face = "bold", hjust = 0.5, 
+                          margin = margin(b = -5)))
             
             rm(values); gc()
             g
@@ -199,13 +226,13 @@ for (time_period in time_periods){
               nrow = 2, heights = c(1.6, 3.4))
     
     if (time_period == "2041-2070"){
-        fname <- file.path(fig_dir, "figure3_spatial.png")
+        fname <- file.path(fig_dir, "figure4_spatial.png")
     } else {
         fname <- file.path(
             fig_dir, sprintf("extended_data_fig4_%s.png", time_period))
     }
     
-    ggsave(fname, width = 6.5, height = 5, dpi = 500, bg = "white")
+    ggsave(fname, width = 6.5, height = 4.9, dpi = 500, bg = "white")
     rm(figs); gc()
 }
 
@@ -283,21 +310,21 @@ for (time_period in time_periods){
                               flip_axes = FALSE,
                               rotate_pal = FALSE,
                               dim = 3,
-                              xlab = "P2N (%)",
-                              ylab = "N2P (%)",
+                              xlab = "Disfavoring (%)",
+                              ylab = "Favoring (%)",
                               breaks = breaks,
                               pad_width = 0.3,
                               size = 6) +
                         theme(axis.text = element_text(
-                            size = 6, color = "black", family = 'Merriweather'),
+                            size = 6, color = "black"),
                             axis.title = element_text(
-                                size = 6, color = "black", family = 'Merriweather'),
+                                size = 6, color = "black"),
                             panel.background = element_rect(fill='transparent'),
                             plot.background = element_rect(fill='transparent', color = NA),
                             axis.title.x = element_text(
-                                margin = margin(t = -12, unit = "mm")),
+                                margin = margin(t = 0.5, unit = "mm")),
                             axis.title.y = element_text(
-                                margin = margin(r = -26, unit = "mm"))))
+                                margin = margin(r = -1, unit = "mm"))))
                 
                 values <- values_bivi
                 rm(values_bivi, values_periods); gc()
@@ -319,9 +346,9 @@ for (time_period in time_periods){
                     theme_void() + 
                     ggtitle(sprintf("%s (%s %s)", title_nm, ssp, time_period)) +
                     theme(plot.margin = unit(c(-0.2, -0.3, 0, -0.3), "cm"),
-                          plot.title = element_text(
-                              family = "Merriweather", size = 10,
-                              face = "bold", hjust = 0.5))
+                          plot.title = element_text(size = 12,
+                                                    face = "bold", hjust = 0.5, 
+                                                    margin = margin(b = -5)))
                 
                 rm(values); gc()
                 g
@@ -335,14 +362,14 @@ for (time_period in time_periods){
                 fname <- file.path(
                     fig_dir, sprintf("Figure_s_sp_%s_%s_%s.png", i - 1, ssp, time_period))
                 
-                ggsave(fname, width = 6.5, height = 5, dpi = 500)
+                ggsave(fname, width = 6.5, height = 5, dpi = 500, bg = "white")
             } else {
                 ggarrange(plotlist = figs, ncol = 2, nrow = 2)
                 
                 fname <- file.path(
                     fig_dir, sprintf("Figure_s_sp_%s_%s_%s.png", i - 1, ssp, time_period))
                 
-                ggsave(fname, width = 6.5, height = 3.4, dpi = 500)
+                ggsave(fname, width = 6.5, height = 3.4, dpi = 500, bg = "white")
             }
             
             rm(figs); gc()
