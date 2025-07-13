@@ -7,3 +7,5 @@ results
 .DS_Store
 */.DS_Store
 */temp_*
+*/*.svg
+*/*.drawio
