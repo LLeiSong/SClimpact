@@ -5,7 +5,7 @@ description: |
 author:
   - name: Lei Song
     url: https://github.com/LLeiSong
-    affiliation: University of California, Santa Barbara
+    affiliation: Rutgers University
 bibliography: references.bib
 bib-humanities: true
 output: 
@@ -494,3 +494,7 @@ catalog <- lapply(features, function(feature){
 
 write.csv(catalog, file.path(root_dir, "climate_change_slurm.csv"), row.names = FALSE)
 ```
+
+# Visualization
+
+All figures can be reproduced by running the scripts in `R/figures`.
