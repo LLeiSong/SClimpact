@@ -56,13 +56,13 @@ figs_regs <- lapply(c("SSP126", "SSP370", "SSP585"), function(ssp){
             geom_tile(aes(x = driver, y = area_n2p, fill = stou_sp_median),
                       color = "white") + 
             scale_fill_bs5(name = "Favoring (%)", "green",
-                           guide = guide_colorbar(order = 1),
+                           guide = guide_colorbar(order = 2),
                            limits = c(0, fill_max)) +
             new_scale_fill() +
             geom_tile(aes(x = driver, y = area_p2n, fill = utos_sp_median),
                       color = "white") + 
             scale_fill_bs5(name = "Disfavoring (%)", "orange",
-                           guide = guide_colorbar(order = 2),
+                           guide = guide_colorbar(order = 1),
                            limits = c(0, fill_max)) +
             scale_y_discrete(labels = rep(c("L", "M", "H"), 2)) +
             geom_hline(yintercept = 3.5, color = 'black', linewidth = 1) +

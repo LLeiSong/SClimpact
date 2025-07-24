@@ -39,7 +39,7 @@ library(sf)
 
 The system should be configured following the instructions in `setup_hpc_environment.Rmd`.
 
-# Prepare occurrences, range maps and environmental variables
+# Prepare data
 
 ## Occurrences
 

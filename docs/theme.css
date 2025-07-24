@@ -13,9 +13,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Bitter');
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono');
 
+root {
+  font-family: Inter, sans-serif;
+  font-feature-settings: 'liga' 1, 'calt' 1; /* fix for Chrome */
+}
+@supports (font-variation-settings: normal) {
+  :root { font-family: InterVariable, sans-serif; }
+}
+
 html {
   /*-- Main font sizes --*/
-  --title-size:      36px;
+  --title-size:      24px;
   --body-size:       1.06rem;
   --code-size:       13px;
   --aside-size:      11px;
@@ -27,10 +35,30 @@ html {
   --aside-color:     rgba(0, 0, 0, 0.6);
   --fig-cap-color:   rgba(0, 0, 0, 0.6);
   /*-- Specify custom fonts ~~~ must be imported above   --*/
-  --heading-font:    "Georgia", serif;
+  --heading-font:    "Inter", sans-serif;
   --mono-font:       "DM Mono", monospace;
-  --body-font:       "Georgia", sans-serif;
-  --navbar-font:     "Georgia", serif;
+  --body-font:       "Inter", sans-serif;
+  --navbar-font:     "Inter", sans-serif;
 }
 
 /* More properties ... */
+/* Custom heading sizes */
+h1 {
+  font-size: var(--heading1-size, 24px) !important;
+}
+
+h2 {
+  font-size: var(--heading2-size, 22px) !important;
+}
+
+h3 {
+  font-size: var(--heading3-size, 20px) !important;
+}
+
+h4 {
+  font-size: var(--heading4-size, 18px) !important;
+}
+
+h5 {
+  font-size: var(--heading5-size, 16px) !important;
+}
