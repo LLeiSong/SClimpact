@@ -1,5 +1,6 @@
 # SClimpact
-Analyze the spatially-explicit impact of climate change on mammal species.
+
+Explainable Artificial Intelligence Reveals Spatially Divergent Effects of Global Change on Mammals.
 
 ## Overview
 
