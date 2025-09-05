@@ -43,6 +43,10 @@ The repository includes:
 
 Please check documents: `docs/workflow.Rmd` to start the analysis.
 
+## Session info
+
+All analyses were conducted in R. The full R session information, including package versions and system details, is saved in [session_info.txt](session_info.txt) for reproducibility.
+
 ## Acknowledgement
 
 This work is supported by project “BoCP-Implementation: BioFI- Biodiversity Forecasting Initiative to Understand Population, Community and Ecosystem Function Under Global Change” funded by a grant to A.E.F. from the National Science Foundation (award number: 2416164).

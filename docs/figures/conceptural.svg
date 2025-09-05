@@ -19,7 +19,7 @@
         stroke-width: .65px;
       }
 
-      .st599, .st600, .st290, .st601, .st602, .st578, .st582 {
+      .st599, .st290, .st578, .st582 {
         fill: none;
       }
 
@@ -219,7 +219,7 @@
         fill: #c3932f;
       }
 
-      .st603 {
+      .st600 {
         fill: #050606;
       }
 
@@ -399,7 +399,7 @@
         fill: #f4d9ba;
       }
 
-      .st95, .st604 {
+      .st95, .st601 {
         fill: #048571;
       }
 
@@ -435,20 +435,20 @@
         fill: #8591c8;
       }
 
-      .st605, .st606, .st604, .st607, .st608, .st609, .st610, .st611, .st612, .st613 {
+      .st602, .st603, .st601, .st604, .st605, .st606, .st607, .st608, .st609, .st610 {
         isolation: isolate;
       }
 
-      .st605, .st604, .st608, .st609 {
+      .st602, .st601, .st605, .st606 {
         font-family: Helvetica-Bold, Helvetica;
         font-weight: 700;
       }
 
-      .st605, .st604, .st608, .st609, .st611, .st612 {
+      .st602, .st601, .st605, .st606, .st608, .st609 {
         font-size: 11px;
       }
 
-      .st605, .st607, .st610, .st611, .st613 {
+      .st602, .st604, .st607, .st608, .st610 {
         fill: #231f20;
       }
 
@@ -884,19 +884,6 @@
         fill: #add7d1;
       }
 
-      .st600, .st601 {
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-
-      .st600, .st601, .st602 {
-        stroke-width: 2px;
-      }
-
-      .st600, .st578 {
-        stroke: #000;
-      }
-
       .st215 {
         fill: #c3c8e2;
       }
@@ -1125,11 +1112,11 @@
         fill: #d85979;
       }
 
-      .st607 {
+      .st604 {
         font-family: ArialMT, Arial;
       }
 
-      .st607, .st610 {
+      .st604, .st607 {
         font-size: 10px;
       }
 
@@ -1137,27 +1124,27 @@
         fill: #828fc8;
       }
 
-      .st614 {
+      .st611 {
         clip-path: url(#clippath-11);
       }
 
-      .st615 {
+      .st612 {
         clip-path: url(#clippath-10);
       }
 
-      .st616 {
+      .st613 {
         clip-path: url(#clippath-15);
       }
 
-      .st617 {
+      .st614 {
         clip-path: url(#clippath-13);
       }
 
-      .st618 {
+      .st615 {
         clip-path: url(#clippath-14);
       }
 
-      .st619 {
+      .st616 {
         clip-path: url(#clippath-12);
       }
 
@@ -1237,39 +1224,39 @@
         fill: #d0d3e3;
       }
 
-      .st620 {
+      .st617 {
         clip-path: url(#clippath-1);
       }
 
-      .st621 {
+      .st618 {
         clip-path: url(#clippath-3);
       }
 
-      .st622 {
+      .st619 {
         clip-path: url(#clippath-4);
       }
 
-      .st623 {
+      .st620 {
         clip-path: url(#clippath-2);
       }
 
-      .st624 {
+      .st621 {
         clip-path: url(#clippath-7);
       }
 
-      .st625 {
+      .st622 {
         clip-path: url(#clippath-6);
       }
 
-      .st626 {
+      .st623 {
         clip-path: url(#clippath-9);
       }
 
-      .st627 {
+      .st624 {
         clip-path: url(#clippath-8);
       }
 
-      .st628 {
+      .st625 {
         clip-path: url(#clippath-5);
       }
 
@@ -1358,7 +1345,7 @@
         stroke-width: 5px;
       }
 
-      .st313, .st601, .st602, .st582 {
+      .st313, .st582 {
         stroke: #020202;
       }
 
@@ -1870,7 +1857,7 @@
         fill: #e5d2d4;
       }
 
-      .st441, .st609 {
+      .st441, .st606 {
         fill: #a66227;
       }
 
@@ -2122,7 +2109,7 @@
         fill: #dadbe2;
       }
 
-      .st610, .st611, .st612, .st613 {
+      .st607, .st608, .st609, .st610 {
         font-family: Helvetica, Helvetica;
       }
 
@@ -2270,10 +2257,6 @@
         fill: #d9af6c;
       }
 
-      .st602 {
-        stroke-miterlimit: 133.33;
-      }
-
       .st540 {
         fill: #afb6dc;
       }
@@ -2346,7 +2329,7 @@
         fill: #7a5722;
       }
 
-      .st629 {
+      .st626 {
         clip-path: url(#clippath);
       }
 
@@ -2431,6 +2414,7 @@
       }
 
       .st578 {
+        stroke: #000;
         stroke-width: 3px;
       }
 
@@ -2510,7 +2494,7 @@
         fill: #dc6683;
       }
 
-      .st613 {
+      .st610 {
         font-size: 9px;
       }
 
@@ -2569,7 +2553,7 @@
   </defs>
   <g>
     <rect class="st599" x="48.13" y="59.38" width="120" height="120"/>
-    <g class="st629">
+    <g class="st626">
       <g>
         <rect class="st229" x="68.13" y="68.48" width="7.27" height="7.27"/>
         <rect class="st576" x="75.4" y="68.48" width="7.27" height="7.27"/>
@@ -2697,7 +2681,7 @@
   </g>
   <g>
     <rect class="st599" x="45.13" y="62.38" width="120" height="120"/>
-    <g class="st620">
+    <g class="st617">
       <g>
         <rect class="st320" x="65.13" y="71.48" width="7.27" height="7.27"/>
         <rect class="st50" x="72.4" y="71.48" width="7.27" height="7.27"/>
@@ -2825,7 +2809,7 @@
   </g>
   <g>
     <rect class="st599" x="42.13" y="65.38" width="120" height="120"/>
-    <g class="st623">
+    <g class="st620">
       <g>
         <rect class="st227" x="62.13" y="74.48" width="7.27" height="7.27"/>
         <rect class="st222" x="69.4" y="74.48" width="7.27" height="7.27"/>
@@ -2951,7 +2935,7 @@
   </g>
   <g>
     <rect class="st599" x="39.13" y="68.38" width="120" height="120"/>
-    <g class="st621">
+    <g class="st618">
       <g>
         <rect class="st320" x="59.13" y="77.48" width="7.27" height="7.27"/>
         <rect class="st503" x="66.4" y="77.48" width="7.27" height="7.27"/>
@@ -3075,26 +3059,30 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st611" transform="translate(36.64 81.74) rotate(-54.81)"><tspan x="0" y="0">Drivers* </tspan></text>
-                                      <text class="st611" transform="translate(36.59 97.43) rotate(-54.81)"><tspan x="0" y="0">of the species</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st608" transform="translate(36.64 81.74) rotate(-54.81)"><tspan x="0" y="0">Drivers*</tspan></text>
+                                      </g>
+                                      <g class="st603">
+                                        <text class="st608" transform="translate(36.59 97.43) rotate(-54.81)"><tspan x="0" y="0">of the species</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3113,25 +3101,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st611" transform="translate(80.97 183.38)"><tspan x="0" y="0">Future</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st608" transform="translate(80.97 183.38)"><tspan x="0" y="0">Future</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3155,25 +3145,27 @@
   <rect class="st69" x="55.9" y="157.57" width="7.27" height="7.27"/>
   <rect class="st454" x="55.9" y="164.84" width="7.27" height="7.27"/>
   <rect class="st11" x="55.9" y="150.3" width="7.27" height="7.27"/>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st613" transform="translate(48.81 164.27)"><tspan x="0" y="0">0</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st610" transform="translate(48.81 164.27)"><tspan x="0" y="0">0</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3197,35 +3189,37 @@
     <line class="st599" x1="51.64" y1="156.32" x2="51.64" y2="144.28"/>
     <g>
       <line class="st290" x1="51.64" y1="156.32" x2="51.64" y2="147.9"/>
-      <path class="st603" d="M51.64,144.28c.63,1.7,1.71,3.82,2.85,5.13l-2.85-1.03-2.85,1.03c1.14-1.31,2.22-3.42,2.85-5.13Z"/>
+      <path class="st600" d="M51.64,144.28c.63,1.7,1.71,3.82,2.85,5.13l-2.85-1.03-2.85,1.03c1.14-1.31,2.22-3.42,2.85-5.13Z"/>
     </g>
   </g>
   <g>
     <line class="st599" x1="51.64" y1="167.09" x2="51.64" y2="179.14"/>
     <g>
       <line class="st290" x1="51.64" y1="167.09" x2="51.64" y2="175.52"/>
-      <path class="st603" d="M51.64,179.14c-.63-1.7-1.71-3.82-2.85-5.13l2.85,1.03,2.85-1.03c-1.14,1.31-2.22,3.42-2.85,5.13Z"/>
+      <path class="st600" d="M51.64,179.14c-.63-1.7-1.71-3.82-2.85-5.13l2.85,1.03,2.85-1.03c-1.14,1.31-2.22,3.42-2.85,5.13Z"/>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st610" transform="translate(42.43 155.21)"><tspan x="0" y="0">+</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st607" transform="translate(42.43 155.21)"><tspan x="0" y="0">+</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3244,25 +3238,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st610" transform="translate(42.13 174.09)"><tspan x="0" y="0">-</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st607" transform="translate(42.13 174.09)"><tspan x="0" y="0">-</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3285,12 +3281,12 @@
     <line class="st599" x1="54.5" y1="80.99" x2="66.64" y2="63.77"/>
     <g>
       <line class="st290" x1="54.5" y1="80.99" x2="64.55" y2="66.73"/>
-      <path class="st603" d="M66.64,63.77c-.47,1.76-.8,4.11-.62,5.84l-1.74-2.49-2.93-.8c1.69-.41,3.79-1.52,5.29-2.55h0Z"/>
+      <path class="st600" d="M66.64,63.77c-.47,1.76-.8,4.11-.62,5.84l-1.74-2.49-2.93-.8c1.69-.41,3.79-1.52,5.29-2.55h0Z"/>
     </g>
   </g>
   <g>
     <rect class="st599" x="187.86" y="59.61" width="120" height="120"/>
-    <g class="st622">
+    <g class="st619">
       <g>
         <rect class="st1" x="207.86" y="68.71" width="7.27" height="7.27"/>
         <rect class="st436" x="215.13" y="68.71" width="7.27" height="7.27"/>
@@ -3416,7 +3412,7 @@
   </g>
   <g>
     <rect class="st599" x="184.86" y="62.61" width="120" height="120"/>
-    <g class="st628">
+    <g class="st625">
       <g>
         <rect class="st359" x="204.86" y="71.71" width="7.27" height="7.27"/>
         <rect class="st149" x="212.13" y="71.71" width="7.27" height="7.27"/>
@@ -3542,7 +3538,7 @@
   </g>
   <g>
     <rect class="st599" x="181.86" y="65.61" width="120" height="120"/>
-    <g class="st625">
+    <g class="st622">
       <g>
         <rect class="st521" x="201.86" y="74.71" width="7.27" height="7.27"/>
         <rect class="st526" x="209.13" y="74.71" width="7.27" height="7.27"/>
@@ -3668,7 +3664,7 @@
   </g>
   <g>
     <rect class="st599" x="178.86" y="68.61" width="120" height="120"/>
-    <g class="st624">
+    <g class="st621">
       <g>
         <rect class="st26" x="198.86" y="77.71" width="7.27" height="7.27"/>
         <rect class="st381" x="206.13" y="77.71" width="7.27" height="7.27"/>
@@ -3792,25 +3788,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st611" transform="translate(221.46 183.38)"><tspan x="0" y="0">Baseline</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st608" transform="translate(221.46 183.38)"><tspan x="0" y="0">Baseline</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3830,25 +3828,27 @@
     </g>
   </g>
   <line class="st582" x1="166.46" y1="134.17" x2="183.53" y2="134.17"/>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st605" transform="translate(94.35 64.51)"><tspan x="0" y="0">Gridded SHAP value for each driver</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st602" transform="translate(94.35 64.51)"><tspan x="0" y="0">Gridded SHAP value for each driver</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3871,25 +3871,27 @@
   <polyline class="st127" points="454.88 165.93 454.88 147.6 473.22 147.6 473.22 165.93 454.88 165.93"/>
   <rect class="st127" x="436.54" y="165.94" width="18.34" height="18.34"/>
   <polyline class="st95" points="454.88 165.94 473.22 165.94 473.22 184.28 454.88 184.28 454.88 165.94"/>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st607" transform="translate(479.96 159.09) rotate(-180) scale(1 -1)"><tspan x="0" y="0">+</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st604" transform="translate(479.96 159.09) rotate(-180) scale(1 -1)"><tspan x="0" y="0">+</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3908,25 +3910,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st607" transform="translate(475.23 177.97)"><tspan x="0" y="0">-</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st604" transform="translate(475.23 177.97)"><tspan x="0" y="0">-</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3945,25 +3949,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st607" transform="translate(460.65 184.6) rotate(90)"><tspan x="0" y="0">+</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st604" transform="translate(460.65 184.6) rotate(90)"><tspan x="0" y="0">+</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -3982,25 +3988,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st607" transform="translate(442.48 190.56)"><tspan x="0" y="0">-</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st604" transform="translate(442.48 190.56)"><tspan x="0" y="0">-</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -4019,25 +4027,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st613" transform="translate(439.53 199.37)"><tspan x="0" y="0">Future</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st610" transform="translate(439.53 199.37)"><tspan x="0" y="0">Future</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -4056,25 +4066,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st613" transform="translate(484.62 147.6) rotate(90)"><tspan x="0" y="0">Baseline</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st610" transform="translate(484.62 147.6) rotate(90)"><tspan x="0" y="0">Baseline</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -4095,7 +4107,7 @@
   </g>
   <g>
     <polygon class="st599" points="331.34 133.62 405.76 133.62 424.87 206.97 350.46 206.97 331.34 133.62"/>
-    <g class="st627">
+    <g class="st624">
       <g>
         <rect class="st139" x="362.86" y="138.18" width="4.51" height="4.51"/>
         <rect class="st139" x="367.37" y="138.18" width="4.51" height="4.51"/>
@@ -4223,7 +4235,7 @@
   </g>
   <g>
     <polygon class="st599" points="329.48 135.48 403.9 135.48 423.01 208.83 348.6 208.83 329.48 135.48"/>
-    <g class="st626">
+    <g class="st623">
       <g>
         <rect class="st139" x="361" y="140.04" width="4.51" height="4.51"/>
         <rect class="st139" x="365.51" y="140.04" width="4.51" height="4.51"/>
@@ -4351,7 +4363,7 @@
   </g>
   <g>
     <rect class="st599" x="346.73" y="136.27" width="74.42" height="74.42"/>
-    <g class="st615">
+    <g class="st612">
       <g>
         <rect class="st139" x="359.14" y="141.9" width="4.51" height="4.51"/>
         <rect class="st139" x="363.65" y="141.9" width="4.51" height="4.51"/>
@@ -4477,7 +4489,7 @@
   </g>
   <g>
     <rect class="st599" x="344.87" y="138.13" width="74.42" height="74.42"/>
-    <g class="st614">
+    <g class="st611">
       <g>
         <rect class="st139" x="357.28" y="143.77" width="4.51" height="4.51"/>
         <rect class="st584" x="361.79" y="143.77" width="4.51" height="4.51"/>
@@ -4601,25 +4613,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st605" transform="translate(351.5 212.55)"><tspan x="0" y="0">Turnovers</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st602" transform="translate(351.5 212.55)"><tspan x="0" y="0">Turnovers</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -4640,7 +4654,7 @@
   </g>
   <g>
     <rect class="st599" x="345.8" y="43.08" width="74.42" height="74.42"/>
-    <g class="st619">
+    <g class="st616">
       <g>
         <rect class="st467" x="358.2" y="48.73" width="4.51" height="4.51"/>
         <rect class="st279" x="362.71" y="48.73" width="4.51" height="4.51"/>
@@ -4768,7 +4782,7 @@
   </g>
   <g>
     <rect class="st599" x="343.94" y="44.94" width="74.42" height="74.42"/>
-    <g class="st617">
+    <g class="st614">
       <g>
         <rect class="st548" x="356.34" y="50.59" width="4.51" height="4.51"/>
         <rect class="st228" x="360.85" y="50.59" width="4.51" height="4.51"/>
@@ -4896,7 +4910,7 @@
   </g>
   <g>
     <rect class="st599" x="342.08" y="46.8" width="74.42" height="74.42"/>
-    <g class="st618">
+    <g class="st615">
       <g>
         <rect class="st245" x="354.48" y="52.45" width="4.51" height="4.51"/>
         <rect class="st128" x="358.99" y="52.45" width="4.51" height="4.51"/>
@@ -5022,7 +5036,7 @@
   </g>
   <g>
     <rect class="st599" x="340.22" y="48.66" width="74.42" height="74.42"/>
-    <g class="st616">
+    <g class="st613">
       <g>
         <rect class="st264" x="352.62" y="54.31" width="4.51" height="4.51"/>
         <rect class="st414" x="357.13" y="54.31" width="4.51" height="4.51"/>
@@ -5146,25 +5160,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st605" transform="translate(340 123.63)"><tspan x="0" y="0">Favorability shifts</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st602" transform="translate(340 123.63)"><tspan x="0" y="0">Favorability shifts</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -5188,25 +5204,27 @@
   <rect class="st104" x="436.53" y="79.21" width="7.27" height="7.27"/>
   <rect class="st184" x="436.53" y="86.48" width="7.27" height="7.27"/>
   <rect class="st45" x="436.53" y="71.94" width="7.27" height="7.27"/>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st613" transform="translate(450.9 85.9) rotate(-180) scale(1 -1)"><tspan x="0" y="0">0</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st610" transform="translate(450.9 85.9) rotate(-180) scale(1 -1)"><tspan x="0" y="0">0</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -5230,35 +5248,37 @@
     <line class="st599" x1="448.07" y1="65.91" x2="448.07" y2="77.96"/>
     <g>
       <line class="st290" x1="448.07" y1="69.53" x2="448.07" y2="77.96"/>
-      <path class="st603" d="M450.92,71.04l-2.85-1.03-2.85,1.03c1.14-1.31,2.22-3.43,2.85-5.13.63,1.71,1.71,3.82,2.85,5.13Z"/>
+      <path class="st600" d="M450.92,71.04l-2.85-1.03-2.85,1.03c1.14-1.31,2.22-3.43,2.85-5.13.63,1.71,1.71,3.82,2.85,5.13Z"/>
     </g>
   </g>
   <g>
     <line class="st599" x1="448.07" y1="100.77" x2="448.07" y2="88.73"/>
     <g>
       <line class="st290" x1="448.07" y1="97.15" x2="448.07" y2="88.73"/>
-      <path class="st603" d="M445.22,95.64l2.85,1.03,2.85-1.03c-1.14,1.31-2.22,3.43-2.85,5.13-.63-1.71-1.71-3.82-2.85-5.13Z"/>
+      <path class="st600" d="M445.22,95.64l2.85,1.03,2.85-1.03c-1.14,1.31-2.22,3.43-2.85,5.13-.63-1.71-1.71-3.82-2.85-5.13Z"/>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st610" transform="translate(453.15 76.04)"><tspan x="0" y="0">Increase</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st607" transform="translate(453.15 76.04)"><tspan x="0" y="0">Increase</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -5277,25 +5297,27 @@
       </g>
     </g>
   </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st610" transform="translate(453.63 96.91)"><tspan x="0" y="0">Decrease</tspan></text>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st607" transform="translate(453.63 96.91)"><tspan x="0" y="0">Decrease</tspan></text>
+                                      </g>
                                     </g>
                                   </g>
                                 </g>
@@ -5312,28 +5334,6 @@
           </g>
         </g>
       </g>
-    </g>
-  </g>
-  <path class="st600" d="M455.68,252.97h4.44M462.9,252.97c0,2.76-2.24,5-5,5s-5-2.24-5-5,2.24-5,5-5,5,2.24,5,5Z"/>
-  <path class="st601" d="M488.36,252.97h3.33"/>
-  <path class="st601" d="M490.03,251.31v3.33"/>
-  <path class="st602" d="M495.03,252.97c0,2.76-2.24,5-5,5s-5-2.24-5-5,2.24-5,5-5,5,2.24,5,5Z"/>
-  <path class="st601" d="M456.86,232.21h3.33"/>
-  <path class="st601" d="M458.53,230.55v3.33"/>
-  <path class="st602" d="M463.53,232.21c0,2.76-2.24,5-5,5s-5-2.24-5-5,2.24-5,5-5,5,2.24,5,5Z"/>
-  <path class="st600" d="M488.87,232.21h4.44M496.09,232.21c0,2.76-2.24,5-5,5s-5-2.24-5-5,2.24-5,5-5,5,2.24,5,5Z"/>
-  <g>
-    <line class="st599" x1="467.94" y1="252.86" x2="479.99" y2="253.06"/>
-    <g>
-      <line class="st290" x1="467.94" y1="252.86" x2="476.37" y2="253"/>
-      <path class="st603" d="M479.99,253.06c-1.71.6-3.85,1.64-5.18,2.76l1.08-2.83-.98-2.87c1.29,1.16,3.38,2.28,5.08,2.94h0Z"/>
-    </g>
-  </g>
-  <g>
-    <line class="st599" x1="468.79" y1="232.1" x2="480.84" y2="232.3"/>
-    <g>
-      <line class="st290" x1="468.79" y1="232.1" x2="477.22" y2="232.24"/>
-      <path class="st603" d="M480.84,232.3c-1.71.6-3.85,1.64-5.18,2.76l1.08-2.83-.98-2.87c1.29,1.16,3.38,2.28,5.08,2.94h0Z"/>
     </g>
   </g>
   <g>
@@ -5352,134 +5352,26 @@
       <path d="M338.68,151.47c-3.71-.37-8.57-.29-12.01.63l4.47-4.32.67-6.18c1.38,3.28,4.3,7.18,6.87,9.88h0Z"/>
     </g>
   </g>
-  <rect class="st441" x="316.86" y="223.15" width="18.34" height="18.34"/>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <text class="st609" transform="translate(340.76 235.32)"><tspan x="0" y="0">Disfavoring turnover</tspan></text>
-                                  </g>
-                                </g>
-                              </g>
-                            </g>
-                          </g>
-                        </g>
-                      </g>
-                    </g>
-                  </g>
-                </g>
-              </g>
-            </g>
-          </g>
-        </g>
-      </g>
-    </g>
-  </g>
-  <polyline class="st95" points="316.86 243.83 335.2 243.83 335.2 262.17 316.86 262.17 316.86 243.83"/>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <text class="st604" transform="translate(340.76 256.32)"><tspan x="0" y="0">Favoring turnover</tspan></text>
-                                  </g>
-                                </g>
-                              </g>
-                            </g>
-                          </g>
-                        </g>
-                      </g>
-                    </g>
-                  </g>
-                </g>
-              </g>
-            </g>
-          </g>
-        </g>
-      </g>
-    </g>
-  </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <text class="st608" transform="translate(39.13 212.76)"><tspan x="0" y="0">All drivers*:</tspan></text>
-      </g>
-    </g>
-    <g class="st606">
-      <g class="st606">
-        <text class="st612" transform="translate(39.13 225.96)"><tspan x="0" y="0">Bioclimate:</tspan></text>
-      </g>
-    </g>
-    <g class="st606">
-      <g class="st606">
-        <text class="st612" transform="translate(82.53 225.96)"><tspan x="0" y="0" xml:space="preserve">    BIO1, BIO2, BIO3, BIO4, BIO5, BIO7,  </tspan></text>
-      </g>
-    </g>
-    <g class="st606">
-      <g class="st606">
-        <text class="st612" transform="translate(39.13 239.16)"><tspan x="0" y="0">BIO8, BIO9, BIO12, BIO14, BIO15, BIO18, and BIO19;</tspan></text>
-      </g>
-    </g>
-    <g class="st606">
-      <g class="st606">
-        <text class="st612" transform="translate(39.13 252.36)"><tspan x="0" y="0">Land cover:</tspan></text>
-      </g>
-    </g>
-    <g class="st606">
-      <g class="st606">
-        <text class="st612" transform="translate(96.61 252.36)"><tspan x="0" y="0" xml:space="preserve"> forest coverage (FOR), </tspan></text>
-      </g>
-    </g>
-    <g class="st606">
-      <g class="st606">
-        <text class="st612" transform="translate(39.13 265.56)"><tspan x="0" y="0">human land use (HLU), and grassland coverage (GRA).</tspan></text>
-      </g>
-    </g>
-  </g>
-  <g class="st606">
-    <g class="st606">
-      <g class="st606">
-        <g class="st606">
-          <g class="st606">
-            <g class="st606">
-              <g class="st606">
-                <g class="st606">
-                  <g class="st606">
-                    <g class="st606">
-                      <g class="st606">
-                        <g class="st606">
-                          <g class="st606">
-                            <g class="st606">
-                              <g class="st606">
-                                <g class="st606">
-                                  <g class="st606">
-                                    <g class="st606">
-                                      <text class="st605" transform="translate(363.83 43.08)"><tspan x="0" y="0">Metrics for each driver</tspan></text>
+  <rect class="st441" x="347.86" y="223.15" width="18.34" height="18.34"/>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <text class="st606" transform="translate(371.76 235.32)"><tspan x="0" y="0">Disfavoring turnover</tspan></text>
                                     </g>
                                   </g>
                                 </g>
@@ -5498,5 +5390,133 @@
       </g>
     </g>
   </g>
-  <image class="st606" width="513" height="237" transform="translate(126.93 85.92) scale(.07)" xlink:href="data:image/png;base64,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"/>
+  <polyline class="st95" points="347.86 243.83 366.2 243.83 366.2 262.17 347.86 262.17 347.86 243.83"/>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <text class="st601" transform="translate(371.76 256.32)"><tspan x="0" y="0">Favoring turnover</tspan></text>
+                                    </g>
+                                  </g>
+                                </g>
+                              </g>
+                            </g>
+                          </g>
+                        </g>
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <text class="st605" transform="translate(39.13 212.76)"><tspan x="0" y="0">All drivers*:</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <text class="st609" transform="translate(39.13 225.96)"><tspan x="0" y="0">Bioclimate:</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <text class="st609" transform="translate(82.53 225.96)"><tspan x="0" y="0" xml:space="preserve">    BIO1, BIO2, BIO3, BIO4, BIO5, BIO7,  </tspan></text>
+        </g>
+      </g>
+    </g>
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <text class="st609" transform="translate(39.13 239.16)"><tspan x="0" y="0">BIO8, BIO9, BIO12, BIO14, BIO15, BIO18, and BIO19;</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <text class="st609" transform="translate(39.13 252.36)"><tspan x="0" y="0">Land cover:</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <text class="st609" transform="translate(96.61 252.36)"><tspan x="0" y="0" xml:space="preserve"> forest coverage (FOR), </tspan></text>
+        </g>
+      </g>
+    </g>
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <text class="st609" transform="translate(39.13 265.56)"><tspan x="0" y="0">human land use (HLU), and grassland coverage (GRA).</tspan></text>
+        </g>
+      </g>
+    </g>
+  </g>
+  <g class="st603">
+    <g class="st603">
+      <g class="st603">
+        <g class="st603">
+          <g class="st603">
+            <g class="st603">
+              <g class="st603">
+                <g class="st603">
+                  <g class="st603">
+                    <g class="st603">
+                      <g class="st603">
+                        <g class="st603">
+                          <g class="st603">
+                            <g class="st603">
+                              <g class="st603">
+                                <g class="st603">
+                                  <g class="st603">
+                                    <g class="st603">
+                                      <g class="st603">
+                                        <text class="st602" transform="translate(363.83 43.08)"><tspan x="0" y="0">Metrics for each driver</tspan></text>
+                                      </g>
+                                    </g>
+                                  </g>
+                                </g>
+                              </g>
+                            </g>
+                          </g>
+                        </g>
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  <image class="st603" width="513" height="237" transform="translate(126.93 85.92) scale(.07)" xlink:href="data:image/png;base64,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"/>
 </svg>
