@@ -41,7 +41,7 @@ The repository includes:
 
 ## Start
 
-Please check documents: `docs/workflow.Rmd` to start the analysis.
+Please check documents: [docs/workflow.Rmd](docs/workflow.Rmd) to start the analysis.
 
 ## Session info
 
