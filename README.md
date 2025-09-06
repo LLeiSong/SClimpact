@@ -41,7 +41,7 @@ The repository includes:
 
 ## Demo
 
-Please check the [demo](demo/demo.Rmd) for the method used in this study.
+Please check the [demo](demo/demo.Rmd) or [its webpage](https://lleisong.github.io/SClimpact/) for the method used in this study.
 
 ## Start
 
