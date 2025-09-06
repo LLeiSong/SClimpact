@@ -41,11 +41,11 @@ The repository includes:
 
 ## Demo
 
-Please check the [demo](https://htmlpreview.github.io/?https://github.com/LLeiSong/SClimpact/blob/main/demo/demo.html) for the method used in this study.
+Please check the [demo](demo/demo.Rmd) for the method used in this study.
 
 ## Start
 
-Please check documents: [docs/workflow.Rmd](docs/workflow.Rmd) or its [online page](https://htmlpreview.github.io/?https://github.com/LLeiSong/SClimpact/blob/main/docs/workflow.html) to start the analysis.
+Please check documents: [docs/workflow.Rmd](docs/workflow.Rmd) to start the analysis.
 
 ## Session info
 
