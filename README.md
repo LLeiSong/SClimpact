@@ -37,15 +37,21 @@ The repository includes:
 └── README.md
 ```
 
->Note: Large input and output files (e.g., occurrence maps, SHAP matrices) are not tracked in this repo but can be shared via Zenodo.
+>Note: Large input and output files (e.g., occurrence maps, SHAP matrices) are not tracked in this repo but are shared via [OSF](https://doi.org/10.17605/OSF.IO/7MDJR).
+
+## Demo
+
+Please check the [demo](https://htmlpreview.github.io/?https://github.com/LLeiSong/SClimpact/blob/main/demo/demo.html) for the method used in this study.
 
 ## Start
 
-Please check documents: [docs/workflow.Rmd](docs/workflow.Rmd) to start the analysis.
+Please check documents: [docs/workflow.Rmd](docs/workflow.Rmd) or its [online page](https://htmlpreview.github.io/?https://github.com/LLeiSong/SClimpact/blob/main/docs/workflow.html) to start the analysis.
 
 ## Session info
 
 All analyses were conducted in R. The full R session information, including package versions and system details, is saved in [session_info.txt](session_info.txt) for reproducibility.
+
+*NOTE:* due to a bug in CRAN version of package spatialEco, users need to install the [development version](https://github.com/jeffreyevans/spatialEco) of this package.
 
 ## Acknowledgement
 

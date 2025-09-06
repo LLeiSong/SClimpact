@@ -1,5 +1,5 @@
 ---
-title: "Multifaceted effects of global change on future mammal distributions revealed by explainable modeling"
+title: "Explainable Artificial Intelligence Reveals Spatially Divergent Effects of Global Change on Mammals"
 description: |
   Supplementary information
 author:
@@ -25,19 +25,43 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+# Load some markdown required packages
 library(here)
 library(kableExtra)
 library(ggplot2)
 # devtools::install_github("davidsjoberg/ggsankey")
 library(ggsankey)
-library(dplyr)
 library(circlize)
-library(sf)
 ```
 
 # Prior
 
-The system should be configured following the instructions in `setup_hpc_environment.Rmd`.
+The system should be configured following the instructions in `setup_hpc_environment.Rmd`. Alternatively, the following packages should be installed.
+
+```{r pkg}
+# Install (if necessary) and load required packages
+required_packages <- c(
+    "checkmate", "optparse", "dplyr", "stringr", # general packages
+    "terra", "sf", "spatialEco", "blockCV", "dbarts", # Special packages
+    "precrec", "randomForest", "intervals", "fastshap",
+    "rgbif", "XML", "httr", "pbapply", "purrr", "CoordinateCleaner",
+    "readxl", "rnaturalearth", # species required packages
+    "parallel", "pbmcapply", "doParallel" # parallel
+)
+
+# Install any missing packages
+installed_packages <- installed.packages()[, "Package"]
+to_install <- setdiff(required_packages, installed_packages)
+if (length(to_install)) install.packages(to_install)
+
+# Load all packages
+lapply(required_packages, library, character.only = TRUE)
+
+# Specific some  conflict functions
+select <- dplyr::select
+filter <- dplyr::filter
+```
+
 
 # Prepare data
 
@@ -50,6 +74,7 @@ After considering various factors, we chose to use occurrence records from [GBIF
 Since our focus is exclusively on mammalian species, we specifically query occurrence records for mammals. The `query_gbif` function is used to efficiently retrieve large volumes of data from [GBIF](https://www.gbif.org).
 
 ```{r query_gbif}
+source("R/utils.R")
 source("R/query_gbif.R")
 
 # Query occurrences for all mammalian species from GBIF.
@@ -213,16 +238,16 @@ source("R/var_selection.R")
 library(pbmcapply)
 species_list <- list.files("data/occurrences/CSVs")
 species_list <- gsub(".csv", "", species_list)
-species_list <- gsub("_", " ", species_list)
 
 var_path <- "data/variables/Env/AllEnv.tif"
 occ_dir <- "data/occurrences"
+range_dir <- "data/IUCN/Expert_Maps"
 aoh_dir <- "data/IUCN_AOH_100m/Mammals"
 dst_dir <- "data/variables/variable_list"
 tmp_dir <- "data/tmp"
 
 pbmclapply(species_list, function(sp){
-    var_selection(sp, var_path, occ_dir, aoh_dir, dst_dir, tmp_dir, 123)
+    var_selection(sp, var_path, occ_dir, range_dir, aoh_dir, dst_dir, tmp_dir)
 }, mc.cores = 10)
 ```
 

@@ -47,7 +47,6 @@ var_selection <- function(sp = "Puma_yagouaroundi",
     assert_class(var_path, "character")
     assert_class(occ_dir, "character")
     assert_class(dst_dir, "character")
-    assert_class(seed, "integer")
     
     # Create the dst_dir
     if (!dir.exists(dst_dir)) dir.create(dst_dir)

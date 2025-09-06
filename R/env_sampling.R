@@ -50,7 +50,7 @@ env_sampling <- function(species = NULL,
     # Create the dst_dir
     if (!dir.exists(occ_dir)) dir.create(occ_dir)
     if (!dir.exists(bg_dir)) dir.create(bg_dir)
-    terraOptions(tempdir = "/home/lsong/temp")
+    # terraOptions(tempdir = "/home/lsong/temp")
     
     # Pull the list of species
     if (is.null(species)){

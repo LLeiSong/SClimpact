@@ -1,0 +1,213 @@
+---
+title: "Explainable Artificial Intelligence Reveals Spatially Divergent Effects of Global Change on Mammals"
+description: |
+  A demo for the core part of the approach
+author:
+  - name: Lei Song
+    url: https://github.com/LLeiSong
+    affiliation: Rutgers University
+output: 
+  distill::distill_article:
+    toc: true
+    toc_depth: '2'
+    theme: ../docs/theme.css
+creative_commons: CC BY
+header-includes: 
+  \usepackage{caption}
+  \renewcommand{\figurename}{Fig.} 
+  \renewcommand{\thefigure}{S\arabic{figure}}
+  \renewcommand{\thetable}{S\arabic{table}}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
+installed_packages <- installed.packages()[, "Package"]
+if (!"tictoc" %in% installed_packages){
+    install.packages("tictoc")}
+library(tictoc)
+library(here)
+```
+
+# Purpose of this demo
+
+This demo illustrates the core steps of our analysis, as described in the manuscript "Explainable Artificial Intelligence Reveals Spatially Divergent Effects of Global Change on Mammals." Specifically, it demonstrates how we integrate species distribution modeling (SDM) with SHAP (SHapley Additive exPlanations) values to attribute projected changes in contributions of individual environmental drivers to habitat suitability.
+
+We use the African savanna elephant (*Loxodonta africana*) as an example species to walk through the modeling pipeline. This example showcases:
+
+- How species occurrence data and environmental predictors are prepared and filtered,
+- How the SDM is trained and evaluated using spatial cross-validation,
+- How SHAP values are computed to quantify variable-specific contributions,
+- And how exposure and opportunity maps are generated to visualize the spatially divergent effects of climate and land cover change.
+
+By focusing on a well-studied, conservation-relevant species, this demo provides an interpretable and reproducible example of how our approach identifies both localized risks and potential opportunities for biodiversity under global change.
+
+*Note: to make demo efficient to run, some of the settings are simplified.*
+
+# Setup and environment
+
+Install and load necessary libraries for this demo:
+
+```{r, results = 'hide', message=FALSE, warning=FALSE}
+# Install (if necessary) and load required packages
+required_packages <- c(
+    "checkmate", "optparse", "dplyr", "stringr", # general packages
+    "terra", "sf", "spatialEco", "blockCV", "dbarts", # Special packages
+    "precrec", "randomForest", "intervals", "fastshap",
+    "parallel", "pbmcapply", "doParallel" # parallel
+)
+
+# Install any missing packages
+installed_packages <- installed.packages()[, "Package"]
+to_install <- setdiff(required_packages, installed_packages)
+if (length(to_install)) install.packages(to_install)
+
+# Load all packages
+lapply(required_packages, library, character.only = TRUE)
+
+# Specific some  conflict functions
+select <- dplyr::select
+filter <- dplyr::filter
+extract <- terra::extract
+```
+
+Define directories and source global util functions:
+
+```{r}
+source(here("R/utils.R"))
+root_dir <- here("demo")
+set.seed(123)
+
+# Remove existing results
+flds <- list.files(file.path(root_dir, "results"), full.names = TRUE)
+for (fld in flds) unlink(fld, recursive = TRUE)
+```
+
+# Species-level variable seleciton
+
+Select important and uncorrelated variables for the species.
+
+```{r}
+tic("Variable selection")
+# Load functions
+source(here("R/var_selection.R"))
+
+# Set parameters
+sp <- "Loxodonta_africana"
+
+var_path <- file.path(root_dir, "data/variables/Env/AllEnv.tif")
+occ_dir <- file.path(root_dir, "data/occurrences")
+range_dir <- file.path(root_dir, "data/IUCN/Expert_Maps")
+aoh_dir <- file.path(root_dir, "data/IUCN_AOH_100m/Mammals")
+dst_dir <- file.path(root_dir, "data/variables/variable_list")
+tmp_dir <- file.path(root_dir, "data/tmp")
+
+# Run variable section with iter = 5
+var_selection(sp, var_path, occ_dir, range_dir, 
+              aoh_dir, dst_dir, tmp_dir, iter = 5)
+toc()
+```
+
+# Environmental sampling
+
+Do environmental sampling occurrences and make environmental balanced background samples.
+
+```{r}
+tic("Environmental sampling")
+# Load functions
+source(here("R/env_sampling.R"))
+
+# Set parameters
+src_dir <- file.path(root_dir, "data/occurrences/CSVs")
+var_dir <- file.path(root_dir, "data/variables")
+range_dir <- file.path(root_dir, "data/IUCN/Expert_Maps")
+region_dir <- file.path(root_dir, "data/terr-ecoregions-TNC")
+occ_dir <- file.path(root_dir, "data/occurrences/CSVs_thin")
+bg_dir <- file.path(root_dir, "data/occurrences/bg")
+
+# Run environmental sampling with background sample = 500 and one core
+env_sampling(sp, src_dir, var_dir, range_dir, 
+             region_dir, occ_dir, bg_dir, 500, 123, 1)
+toc()
+```
+
+# Species distribution modeling
+
+Build the down-sampled random forest model.
+
+```{r}
+tic("Build model")
+# Load functions
+source(here("R/rf_dws.R"))
+
+# Set parameters
+var_dir <- file.path(root_dir, "data/variables")
+occ_dir <- file.path(root_dir, "data/occurrences")
+range_dir <- file.path(root_dir, "data/IUCN/Expert_Maps")
+dst_dir <- file.path(root_dir, "results/sdm")
+
+# Build down-sampled random forest model
+rf_dws(sp, occ_dir, var_dir, range_dir, dst_dir)
+toc()
+```
+
+# SHAP values calculation
+
+Calculate SHAP values of each environmental variables for baseline and future.
+
+```{r}
+tic("Calculate SHAP values")
+# Load functions
+source(here("R/shap.R"))
+
+# Set parameters
+work_dir <- file.path(root_dir, "results/sdm")
+var_dir <- file.path(root_dir, "data/variables")
+range_dir <- file.path(root_dir, "data/IUCN/Expert_Maps")
+
+# Calculate SHAP values for variables with max_nshap = 100
+shap(sp, work_dir, var_dir, range_dir, max_nshap = 100)
+toc()
+```
+
+# Analyze changes
+
+Use SHAP values to track changes.
+
+```{r}
+tic("Analyze changes")
+# Load functions
+source(here("R/climate_change.R"))
+
+# Set parameters
+scenario <- "ssp126_2011-2040"
+feature <- "bio12"
+sdm_dir <- file.path(root_dir, "results/sdm")
+dst_dir <- file.path(root_dir, "results/climate_change", sp)
+if (!dir.exists(dst_dir)) dir.create(dst_dir, recursive = TRUE)
+
+# Analyze changes for this species
+change_sp_demo(sp, scenario, feature, root_dir, sdm_dir, dst_dir)
+toc()
+```
+
+# Visualize
+
+Directional change of this single species.
+
+```{r}
+dir_changes <- rast(
+    file.path(dst_dir, sprintf("dir_change_%s_%s.tif", feature, scenario)))
+plot(dir_changes)
+```
+
+Magnitude change of this single species.
+
+```{r}
+mag_changes <- rast(
+    file.path(dst_dir, sprintf("mag_change_%s_%s.tif", feature, scenario)))
+mag_changes[mag_changes > 1] <- NA # Remove very rare abnormal pixel.
+plot(mag_changes)
+```
+

@@ -324,3 +324,109 @@ climate_change_sp <- function(sp,
     fname <- file.path(dst_dir, sprintf("changes_%s.csv", sp))
     write.csv(results, fname, row.names = FALSE)
 }
+
+#' @title change_sp_demo
+#' @description Function to calculate climate change impact of a specific feature for a specific species.
+#' @param sp (`character`) A species name.
+#' @param scenario (`vector`) A climate model scenario.
+#' @param feature (`vector`) A environmetal variable.
+#' @param root_dir (`character`) The directory for variable list.
+#' @param sdm_dir (`character`) The directory for sdm of species.
+#' @param dst_dir (`character`) The destination directory to save out the results.
+#' @return A file will be saved out.
+#' 
+#' @details
+#' Make sure GDAL library is installed on your machine to make this work.
+#' 
+#' @import checkmate
+#' @import terra
+#' @import sf
+#' @import dplyr
+#' @import stringr
+#' @import Hmisc
+#' @export
+#' @examples
+#' \donttest{
+#' sp <- "Geoxus_valdivianus"
+#' scenario <- "ssp370_2041-2070"
+#' feature <- "bio1"
+#' root_dir <- "/home/lsong/SCImpact"
+#' sdm_dir <- "/bigscratch/lsong/results/sdm"
+#' dst_dir <- "/bigscratch/lsong/climate_change"
+#' change_sp_demo(sp, scenario, feature, root_dir, sdm_dir, dst_dir)
+#' }
+#' 
+#' 
+
+change_sp_demo <- function(sp, 
+                           scenario,
+                           feature,
+                           root_dir,
+                           sdm_dir,
+                           dst_dir){
+    ## Get file names for these species
+    fname <- list.files(file.path(sdm_dir, sp), pattern = "shap_base", 
+                        full.names = TRUE)
+    
+    # Load dispersal rate and continents
+    dispersal_rates <- read.csv(
+        file.path(root_dir, "data/variables/species_dispersal_rate.csv"))
+    continents <- st_read(
+        file.path(root_dir, "data/variables/continents.geojson"), quiet = TRUE)
+    
+    # Load layers
+    cur <- rast(fname) %>% subset(feature)
+    fut_fname <- sprintf("shap_%s_%s", scenario, sp)
+    fut_fname <- list.files(
+        file.path(sdm_dir, sp), pattern = fut_fname,
+        full.names = TRUE)
+    fut <- rast(fut_fname) %>% subset(feature)
+    
+    # Load the range for clipping layers
+    sp <- rev(strsplit(dirname(fname), "/")[[1]])[1]
+    range <- st_read(
+        file.path(root_dir, "data/IUCN/Expert_Maps", 
+                  sprintf("%s.geojson", sp)), quiet = TRUE) %>% 
+        st_transform(crs(cur))
+    dispersal_rate <- dispersal_rates %>% 
+        filter(species == gsub("_", " ", sp)) %>% pull(dispersal_rate)
+    continent <- continents %>% 
+        slice(unique(unlist(st_intersects(range, .))))
+    
+    # Make the mask
+    end_year <- as.integer(strsplit(scenario, "_|-")[[1]][3])
+    dispersal_distance <- dispersal_rate * (end_year - 2011 + 1) * 1000
+    msk <- range %>% st_buffer(dispersal_distance) %>% 
+        st_intersection(continent) %>% st_union() %>% st_as_sf()
+    
+    # Clip
+    cur <- cur %>% mask(msk)
+    fut <- fut %>% mask(msk)
+    
+    # Direction change
+    lyr <- ((cur >= 0) + 1) * ((fut >= 0) + 3)
+    
+    dir_changes <- do.call(c, lapply(c(3, 4, 6, 8), function(x){
+        lyr == x
+    }))
+    names(dir_changes) <- c("N to N", "N to P", "P to N", "P to P")
+    
+    # Value change
+    pos_msk <- cur >= 0
+    pos_msk[pos_msk == 0] <- NA
+    neg_msk <- cur < 0
+    neg_msk[neg_msk == 0] <- NA
+    
+    chg <- (fut - cur)
+    mag_changes <- c(mask(chg, pos_msk), mask(chg, neg_msk))
+    names(mag_changes) <- c("P", "N")
+    
+    # Save out
+    fname <- file.path(
+        dst_dir, sprintf("dir_change_%s_%s.tif", feature, scenario))
+    writeRaster(dir_changes, fname)
+    
+    fname <- file.path(
+        dst_dir, sprintf("mag_change_%s_%s.tif", feature, scenario))
+    writeRaster(mag_changes, fname)
+}
