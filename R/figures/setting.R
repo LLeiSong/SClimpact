@@ -111,3 +111,11 @@ grps <- data.frame(var = paste0("BIO", c(1, 5, 9, 3, 4, 2, 8, 7)),
                      group = "Land cover", color = "#1c2541")) %>% 
     mutate(group = factor(
         group, levels = c("Temperature", "Precipitation", "Land cover")))
+
+# Function to identify outliers based on IQR
+is_outlier <- function(x) {
+    Q1 <- quantile(x, .05, na.rm = TRUE)
+    Q3 <- quantile(x, .95, na.rm = TRUE)
+    IQR <- Q3 - Q1
+    x < (Q1 - 1.5 * IQR) | x > (Q3 + 1.5 * IQR)
+}

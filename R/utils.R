@@ -452,3 +452,281 @@ mod_eval <- function(score, pred, label){
                tpr = tpr, tnr = tnr, tss = tss,
                auc = aucs$aucs[1], prc = aucs$aucs[2])
 }
+
+# Author:   Lei Song
+# contact:  lsong@ucsb.edu
+# Date:     2024-12-21
+# Description: Generating virtual species
+
+# An updated version of generateRandomSp to take formula
+# Reference: virtualspecies R package: https://github.com/Farewe/virtualspecies
+generateRandomSp <- function(
+        raster.stack, 
+        approach = "automatic",
+        rescale = TRUE,
+        convert.to.PA = TRUE,
+        relations = c("gaussian", "linear", "logistic", "quadratic"),
+        rescale.each.response = TRUE,
+        realistic.sp = TRUE,
+        species.type = "multiplicative",
+        formula = NULL,
+        niche.breadth = "any",
+        sample.points = FALSE, 
+        nb.points = 10000,
+        PA.method = "probability",
+        adjust.alpha = TRUE,
+        beta = "random", # random, 0.5
+        alpha = -0.1,
+        species.prevalence = NULL,
+        seed = 123,
+        plot = TRUE){
+    
+    set.seed(seed)
+    if(inherits(raster.stack, "Raster")) {
+        raster.stack <- rast(raster.stack)
+    }
+    if(!(inherits(raster.stack, "SpatRaster")))
+    {
+        stop("raster.stack must be a SpatRaster object")
+    }
+    
+    
+    if(approach == "automatic")
+    {
+        if(nlyr(raster.stack) <= 5)
+        {
+            approach <- "response"
+        } else
+        {
+            approach <- "pca"
+        }
+    } else if (approach == "random")
+    {
+        approach <- sample(c("response", "pca"), 1)
+    } else if(!(approach %in% c("response", "pca")))
+    {
+        stop("Argument approach was misspecified. Either choose 'automatic', ",
+             "'random', 'response' or 'pca'.")
+    }
+    
+    var.names <- names(raster.stack)
+    
+    if(approach == "pca")
+    {
+        results <- generateSpFromPCA(raster.stack,
+                                     rescale = rescale,
+                                     niche.breadth = niche.breadth,
+                                     sample.points = sample.points, 
+                                     nb.points = nb.points,
+                                     plot = FALSE)
+    } else if (approach == "response")
+    {
+        parameters <- list()
+        message(" - Determining species' response to predictor variables\n")
+        if(any(!(relations %in% c("gaussian", "linear", "logistic", "quadratic"))))
+        {
+            stop(paste("Wrong relation type specified: pick among '", 
+                       paste(c("gaussian", "linear", "logistic", "quadratic"), 
+                             collapse = " "), "'",
+                       collapse = " "))
+        }
+        valid.cells <- setValues(raster.stack[[1]], 1)
+        var.order <- sample(var.names, length(var.names), replace = F)
+        for (i in 1:length(var.order))
+        {
+            
+            cur.var <- var.order[i]
+            cur.rast <- raster.stack[[cur.var]]
+            if(realistic.sp) cur.rast <- cur.rast * valid.cells # Cur.rast is 
+            # here restricted to current suitable conds
+            
+            type <- sample(relations, 1)
+            
+            min_ <- global(cur.rast, "min", na.rm = TRUE)[1, 1]
+            max_ <- global(cur.rast, "max", na.rm = TRUE)[1, 1]
+            
+            
+            if (type == "gaussian")
+            {
+                parameters[[cur.var]] <- list(
+                    fun = 'dnorm',
+                    args = c(mean = sample(seq(min_,
+                                               max_, 
+                                               length = 100000), 1),
+                             sd = sample(seq(0, 
+                                             (max_ - min_), 
+                                             length = 100000), 1))
+                )
+            } else if (type == "linear")
+            { # At the moment this is not really useful because the rescale will 
+                # transform the results in either 0:1 or 1:0, regardless of the slope
+                # To be improved later
+                parameters[[cur.var]] <- list(
+                    fun = 'linearFun',
+                    args = c(a = sample(seq(-1, 1, length = 100), 1),
+                             b = sample(seq(min_, 
+                                            max_, 
+                                            length = 100000), 1))
+                )
+            } else if (type == "logistic")
+            {
+                beta.t <- sample(seq(min_,
+                                     max_,
+                                     length = 1000000), 1)
+                alpha.t <-  sample(c(seq((max_ - min_)/1000,
+                                         (max_ - min_)/100, length = 10),
+                                     seq((max_ - min_)/100,
+                                         (max_ - min_)/10, length = 100),
+                                     seq((max_ - min_)/10,
+                                         (max_ - min_)*10, length = 10)), size = 1)
+                if(realistic.sp == TRUE)
+                {
+                    if(beta.t > max_)
+                    {
+                        alpha.t <- alpha.t
+                    } else if (beta.t < min_)
+                    {
+                        alpha.t <- -alpha.t
+                    } else
+                    {
+                        alpha.t <- sample(c(alpha.t, -alpha.t), 1)
+                    }
+                }
+                
+                parameters[[cur.var]] <- list(fun = 'logisticFun',
+                                              args = c(alpha = alpha.t,
+                                                       beta = beta.t)
+                )
+            } else if (type == "quadratic")
+            {
+                max.point <- sample(seq(min_,
+                                        max_, 
+                                        length = 1000), 1)
+                a <- sample(seq(-.01, -20, length = 10000), 1)
+                b <- - max.point * 2 * a
+                parameters[[cur.var]] <- list(fun = 'quadraticFun',
+                                              args = c(a = a,
+                                                       b = b,
+                                                       c = 0)
+                )
+                
+            }
+            
+            # Restricting values to suitable conditions
+            tmp.rast <- app(raster.stack[[cur.var]], fun = function(x)
+            {
+                do.call(match.fun(parameters[[cur.var]]$fun), 
+                        args = c(list(x), parameters[[cur.var]]$args))
+            }
+            )
+            tmp.rast <- (tmp.rast - global(tmp.rast, "min", na.rm = TRUE)[1, 1]) /
+                (global(tmp.rast, "max", na.rm = TRUE)[1, 1] - 
+                     global(tmp.rast, "min", na.rm = TRUE)[1, 1])
+            valid.cells <- valid.cells * (tmp.rast > 0.05)
+        }
+        message(" - Calculating species suitability\n")
+        results <- generateSpFromFun(raster.stack, 
+                                     parameters, 
+                                     rescale = rescale,
+                                     formula = formula,
+                                     species.type = species.type, 
+                                     plot = FALSE,
+                                     rescale.each.response = rescale.each.response)
+    }
+    
+    if(convert.to.PA == TRUE) {
+        message(" - Converting into Presence - Absence\n")
+        
+        # Need to adjust alpha to appropriate scale if rescale = FALSE
+        if(rescale == FALSE) {
+            if(adjust.alpha)
+            {
+                alpha <- diff(c(global(results$suitab.raster,
+                                       min, na.rm = TRUE)[1, 1],
+                                global(results$suitab.raster,
+                                       max, na.rm = TRUE)[1, 1])) * alpha
+            }
+            results <- convertToPA(results, 
+                                   PA.method = PA.method,
+                                   alpha = alpha,
+                                   beta = beta,
+                                   species.prevalence = species.prevalence,
+                                   plot = FALSE)
+            
+            if(plot) plot(results)
+        } else {
+            
+            results <- convertToPA(results, 
+                                   PA.method = PA.method,
+                                   alpha = alpha,
+                                   beta = beta,
+                                   species.prevalence = species.prevalence,
+                                   plot = FALSE)
+            
+            if(plot) plot(results)
+        }
+    } else {
+        if(plot) plot(results)
+    }
+    
+    return(results)
+}
+
+# Function to calculate the rescale parameters for variables
+var_rescale_parameters <- function(sp, vars){
+    # Reconstruct new data
+    vars <- as.data.frame(vars) %>% na.omit()
+    if (!is.null(sp$details$parameters)){
+        parameters <- sp$details$parameters
+        lapply(1:length(vars), function(i) {
+            nm <- names(parameters)[i]
+            cur.seq <- vars[[nm]]
+            values <- do.call(match.fun(parameters[[i]]$fun), 
+                              args = c(list(cur.seq), parameters[[i]]$args))
+            
+            # Rescale
+            data.frame(var = nm, min = min(values), max = max(values))
+        }) %>% bind_rows()
+    } else {
+        lapply(names(vars), function(nm) {
+            values <- vars[[nm]]
+            
+            # Rescale
+            data.frame(var = nm, min = min(values), max = max(values))
+        }) %>% bind_rows()
+    }
+}
+
+# Prediction function for virtual species for the case of being omniscient
+pred_equation <- function(sp, newdata){
+    # Reconstruct new data
+    newdata <- newdata %>% select(sp$details$variables)
+    parameters <- sp$details$parameters
+    minmaxs <- sp$details$rescale.each.response.parameters
+    
+    newdata <- lapply(1:length(parameters), function(i) {
+        nm <- names(parameters)[i]
+        cur.seq <- newdata[[nm]]
+        values <- do.call(match.fun(parameters[[i]]$fun), 
+                          args = c(list(cur.seq), parameters[[i]]$args))
+        
+        # Rescale
+        minmax <- minmaxs %>% filter(var == nm)
+        data.frame(x =  (values - minmax$min) / (minmax$max - minmax$min)) %>% 
+            rename("{nm}" := x)
+    }) %>% bind_cols()
+    
+    
+    # Apply formula, rescale, and convert to PA
+    prediction <- rlang::eval_tidy(
+        rlang::parse_expr(sp$details$formula), data = newdata)
+    
+    prediction <- (prediction - min(prediction)) / 
+        (max(prediction) - min(prediction))
+}
+
+# Calculate the prevalence of a virtual species
+prevalence <- function(x){
+    y <- length(which(values(x) == 1)) / length(which(!is.na(values(x))))
+    return(y)
+}

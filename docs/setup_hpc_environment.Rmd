@@ -145,7 +145,8 @@ conda install conda-forge::r-essentials
 Install other essential R packages
 
 ```
-conda install -c conda-forge r-fastshap r-optparse r-readxl r-rgbif r-here r-devtools
+conda install -c conda-forge r-fastshap r-optparse r-readxl r-rgbif r-here r-devtools r-proc r-randomforest
+conda install -c r r-virtualspecies
 ```
 
 ### Step 4: Install some public GitHub repo

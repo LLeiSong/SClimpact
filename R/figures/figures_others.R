@@ -138,3 +138,265 @@ ggplot(shaps_mean) +
 
 ggsave(file.path(fig_dir, "Figure_s_nshap.png"),
        width = 3, height = 4, dpi = 500, bg = "white")
+
+#### Justification for SHAP ####
+# Load all statistics
+species_list <- read.csv(
+    file.path(root_dir, "results/species_reliable_final.csv"))
+
+evals_omni <- read.csv(file.path(root_dir, "results/validate/evals_raw.csv")) %>% 
+    left_join(., species_list %>% select(species, range), 
+              by = c("sp" = "species"))
+
+# Rename the item
+evals_omni <- evals_omni %>% 
+    mutate(item = factor(
+        item, 
+        levels = c("dat", "dat_less", "bg_bigger", "bg_smaller"),
+        labels = c("Matched domain", "Matched domain with less samples",
+                   "Bigger domain", "Smaller domain"))) %>% 
+    rename(Background = item)
+
+evals_omni %>% group_by(Background) %>% 
+    summarise(r = median(r, na.rm = TRUE), iou = median(iou, na.rm = TRUE))
+
+# Filter out outliers
+evals_filtered <- lapply(unique(evals_omni$Background), function(x){
+    evals_omni[evals_omni$Background == x, ][
+        !is_outlier(evals_omni[evals_omni$Background == x, ]$r), ]
+}) %>% bind_rows()
+
+# Get the bad example, the name is pseudo without any meaning
+evals_bad <- evals_omni %>% filter(sp == "Ovis_gmelini")
+
+# Figure
+ggplot(evals_omni, aes(x = r, y = iou, color = Background)) +
+    geom_smooth(
+        data = evals_filtered, aes(x = r, y = iou, color = Background),
+        method = lm, se = FALSE, linewidth = 1) +
+    geom_point(size = 1) + scale_color_npg() +
+    geom_point(data = evals_bad, aes(x = r, y = iou, color = Background), 
+               shape = 18, size = 4, show.legend = FALSE) +
+    labs(x = "Correlation", y = "IoU") +
+    theme_pubclean(base_size = 11) + 
+    theme(axis.text = element_text(color = "black", size = 11),
+          axis.title = element_text(color = "black", size = 11),
+          legend.text = element_text(color = "black", size = 11),
+          panel.grid.major.x = element_line(
+              linetype = "dotted", color = "lightgrey")) +
+    guides(color = guide_legend(nrow = 2, byrow = TRUE))
+
+ggsave(file.path(fig_dir, "Figure_s_shap.png"), 
+       width = 6.5, height = 5.5, dpi = 300, bg = "white")
+
+# Load the species
+load(file.path(
+    root_dir, "results/validate/examples", 
+    "Ovis_gmelini", "v_sp.rda"))
+
+shaps_dat <- rast(file.path(
+    root_dir, "results/validate/examples", "Ovis_gmelini", "shaps_dat.tif"))
+
+suits_dat <- rast(file.path(
+    root_dir, "results/validate/examples", "Ovis_gmelini", "suits_dat.tif"))
+
+load("results/validate/examples/Ovis_gmelini/acg_bg_dat.rda")
+
+map_theme <- theme_pubclean(base_size = 10) + 
+    theme(axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_text(color = "black", size = 10),
+          legend.text = element_text(color = "black", size = 10),
+          plot.title = element_text(hjust = 0.5, size = 10),
+          legend.key.height = unit(0.3, "cm"))
+
+g_shaps <- purrr::map(
+    seq_len(nlyr(shaps_dat)),
+    function(x) {
+        ggplot() +
+            geom_spatraster(data = shaps_dat[[x]]) +
+            scale_fill_whitebox_c(
+                name = "Shapley\nvalue", palette = "viridi", 
+                na.value = "transparent",
+                labels = scales::label_number(accuracy = 0.1)) +
+            labs(title = toupper(names(shaps_dat[[x]]))) +
+            map_theme
+    }
+)
+
+g_suits <- purrr::map(
+    seq_len(nlyr(suits_dat)),
+    function(x) {
+        ggplot() +
+            geom_spatraster(data = suits_dat[[x]]) +
+            scale_fill_whitebox_c(
+                name = "Suitability\n(0-1)", palette = "viridi", 
+                na.value = "transparent",
+                labels = scales::label_number(accuracy = 0.1)) +
+            labs(title = toupper(names(shaps_dat[[x]]))) +
+            map_theme
+    }
+)
+
+cowplot::plot_grid(plotlist = c(g_shaps, g_suits), nrow = 2)
+
+ggsave(file.path(fig_dir, "Figure_s_exp.png"), 
+       width = 6.5, height = 4.5, dpi = 300, bg = "white")
+
+shaps_dat <- shaps_dat >= 0
+g_shaps <- purrr::map(
+    seq_len(nlyr(shaps_dat)),
+    function(x) {
+        ggplot() +
+            geom_spatraster(data = shaps_dat[[x]]) +
+            scale_fill_manual(
+                name = "Binary (Shapley)", values = c("#bde0fe", "#003049"),
+                labels = c(0, 1), na.translate = FALSE) +
+            labs(title = toupper(names(shaps_dat[[x]]))) +
+            map_theme
+    }
+)
+
+suits_dat <- suits_dat >= avgs_bg
+g_suits <- purrr::map(
+    seq_len(nlyr(suits_dat)),
+    function(x) {
+        ggplot() +
+            geom_spatraster(data = suits_dat[[x]]) +
+            scale_fill_manual(
+                name = "Binary (Suitability)", values = c("#bde0fe", "#003049"),
+                labels = c(0, 1), na.translate = FALSE) +
+            labs(title = toupper(names(shaps_dat[[x]]))) +
+            map_theme
+    }
+)
+
+cowplot::plot_grid(plotlist = c(g_shaps, g_suits), nrow = 2)
+
+ggsave(file.path(fig_dir, "Figure_s_exp_binary.png"), 
+       width = 6.5, height = 4.5, dpi = 300, bg = "white")
+
+#### Justification for SHAP and RF ####
+evals_rf <- read.csv(file.path(root_dir, "results/validate/evals_rf_raw.csv")) %>% 
+    left_join(., species_list %>% select(species, range), 
+              by = c("sp" = "species"))
+
+evals_rf <- evals_rf %>% 
+    mutate(item = factor(
+        item, 
+        levels = c("dat", "dat_less", "bg_bigger", "bg_smaller"),
+        labels = c("Matched domain", "Matched domain with less samples",
+                   "Bigger domain", "Smaller domain"))) %>% 
+    rename(Background = item)
+
+evals_rf %>% group_by(Background) %>% 
+    summarise(r = median(r, na.rm = TRUE), iou = median(iou, na.rm = TRUE))
+
+evals_bad <- evals_rf %>% filter(sp == "Platyrrhinus_dorsalis")
+
+# Figure
+ggplot(evals_rf, aes(x = r, y = iou, color = Background)) +
+    geom_smooth(
+        data = evals_rf, aes(x = r, y = iou, color = Background),
+        method = lm, se = FALSE, linewidth = 1) +
+    geom_point(size = 1) + scale_color_npg() +
+    geom_point(data = evals_bad, aes(x = r, y = iou, color = Background),
+               shape = 18, size = 4, show.legend = FALSE) +
+    labs(x = "Correlation", y = "IoU") +
+    theme_pubclean(base_size = 11) + 
+    theme(axis.text = element_text(color = "black", size = 11),
+          axis.title = element_text(color = "black", size = 11),
+          legend.text = element_text(color = "black", size = 11),
+          panel.grid.major.x = element_line(
+              linetype = "dotted", color = "lightgrey")) +
+    guides(color = guide_legend(nrow = 2, byrow = TRUE))
+
+ggsave(file.path(fig_dir, "Figure_s_shap_rf.png"), 
+       width = 6.5, height = 5.2, dpi = 300, bg = "white")
+
+sp <- "Platyrrhinus_dorsalis"
+
+load(file.path(
+    root_dir, "results/validate/examples", sp, "v_sp.rda"))
+
+shaps_dat <- rast(file.path(
+    root_dir, "results/validate/examples", sp, "shaps_dat.tif"))
+
+suits_dat <- rast(file.path(
+    root_dir, "results/validate/examples", sp, "suits_dat.tif"))
+
+load(file.path("results/validate/examples", sp, "acg_bg_dat.rda"))
+
+map_theme <- theme_pubclean(base_size = 10) + 
+    theme(axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_text(color = "black", size = 10),
+          legend.text = element_text(color = "black", size = 10),
+          plot.title = element_text(hjust = 0.5, size = 10),
+          legend.key.height = unit(0.3, "cm"))
+
+g_shaps <- purrr::map(
+    seq_len(nlyr(shaps_dat)),
+    function(x) {
+        ggplot() +
+            geom_spatraster(data = shaps_dat[[x]]) +
+            scale_fill_whitebox_c(
+                name = "Shapley\nvalue", palette = "viridi", 
+                na.value = "transparent",
+                labels = scales::label_number(accuracy = 0.1)) +
+            labs(title = toupper(names(shaps_dat[[x]]))) +
+            map_theme
+    }
+)
+
+g_suits <- purrr::map(
+    seq_len(nlyr(suits_dat)),
+    function(x) {
+        ggplot() +
+            geom_spatraster(data = suits_dat[[x]]) +
+            scale_fill_whitebox_c(
+                name = "Suitability\n(0-1)", palette = "viridi", 
+                na.value = "transparent",
+                labels = scales::label_number(accuracy = 0.1)) +
+            labs(title = toupper(names(shaps_dat[[x]]))) +
+            map_theme
+    }
+)
+
+cowplot::plot_grid(plotlist = c(g_shaps, g_suits), nrow = 2)
+
+ggsave(file.path(fig_dir, "Figure_s_exp_rf.png"), 
+       width = 6.5, height = 4.5, dpi = 300, bg = "white")
+
+shaps_dat <- shaps_dat >= 0
+g_shaps <- purrr::map(
+    seq_len(nlyr(shaps_dat)),
+    function(x) {
+        ggplot() +
+            geom_spatraster(data = shaps_dat[[x]]) +
+            scale_fill_manual(
+                name = "Binary (Shapley)", values = c("#bde0fe", "#003049"),
+                labels = c(0, 1), na.translate = FALSE) +
+            labs(title = toupper(names(shaps_dat[[x]]))) +
+            map_theme
+    }
+)
+
+suits_dat <- suits_dat >= avgs_bg
+g_suits <- purrr::map(
+    seq_len(nlyr(suits_dat)),
+    function(x) {
+        ggplot() +
+            geom_spatraster(data = suits_dat[[x]]) +
+            scale_fill_manual(
+                name = "Binary (Suitability)", values = c("#bde0fe", "#003049"),
+                labels = c(0, 1), na.translate = FALSE) +
+            labs(title = toupper(names(shaps_dat[[x]]))) +
+            map_theme
+    }
+)
+
+cowplot::plot_grid(plotlist = c(g_shaps, g_suits), nrow = 2)
+
+ggsave(file.path(fig_dir, "Figure_s_exp_binary_rf.png"), 
+       width = 6.5, height = 4.5, dpi = 300, bg = "white")
