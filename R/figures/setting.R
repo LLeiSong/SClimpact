@@ -76,6 +76,21 @@ sp_names <- sp_names %>% select(species, Red_List_Category_2019) %>%
     # Vulnerable, Endangered, or Critically Endangered is endangered
     mutate(status = ifelse(category %in% c("CR", "EN", "VU"), "EN", "NEN"))
 
+#### Load range size and calculate specialist and generalist ####
+rs_sp <- read.csv(file.path(root_dir, "results/range_size_species.csv")) %>% 
+    mutate(species = gsub("_", " ", species))
+
+q <- quantile(rs_sp$range_size, c(0.25, 0.75), na.rm = TRUE)
+rs_sp <- rs_sp %>%
+    mutate(class = cut(range_size,
+                       breaks = c(-Inf, q[1], q[2], Inf),
+                       labels = c("specialist", "intermediate", "generalist"),
+                       include.lowest = TRUE, right = TRUE)) %>% 
+    select(species, class)
+
+# Put together
+sp_names <- left_join(sp_names, rs_sp, by = "species")
+
 #### Define layer for low, middle and high latitude areas ####
 areas <- st_bbox(c(xmin = -180, ymin = -90, xmax = 180, ymax = 90)) %>% 
     st_as_sfc() %>% st_as_sf(crs = 4326)

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 792 612">
-  <!-- Generator: Adobe Illustrator 29.6.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 9)  -->
+  <!-- Generator: Adobe Illustrator 30.0.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 123)  -->
   <defs>
     <style>
       .st0 {
@@ -827,7 +827,7 @@
         fill: #231f20;
       }
 
-      .st499, .st502, .st504 {
+      .st499, .st501, .st504 {
         font-family: Helvetica, Helvetica;
       }
 
@@ -865,14 +865,6 @@
 
       .st205 {
         fill: #e6bbc1;
-      }
-
-      .st501 {
-        font-family: Merriweather, Merriweather;
-      }
-
-      .st501, .st502 {
-        font-size: 7px;
       }
 
       .st206 {
@@ -1009,6 +1001,10 @@
 
       .st229 {
         fill: #f1d4b0;
+      }
+
+      .st501, .st503 {
+        font-size: 7px;
       }
 
       .st230 {
@@ -1495,12 +1491,12 @@
         fill: #e3dedf;
       }
 
-      .st503 {
+      .st502 {
         font-family: Helvetica-Bold, Helvetica;
         font-weight: 700;
       }
 
-      .st503, .st504 {
+      .st502, .st504 {
         font-size: 8px;
       }
 
@@ -1856,6 +1852,10 @@
         fill: #e6aeb8;
       }
 
+      .st503 {
+        font-family: ArialMT, Arial;
+      }
+
       .st431 {
         fill: #dbdce2;
       }
@@ -2174,7 +2174,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st504" transform="translate(36.9 85.97) rotate(-54.81)"><tspan x="0" y="0">Driver</tspan></text>
+                    <g class="st500">
+                      <text class="st504" transform="translate(36.9 85.97) rotate(-54.81)"><tspan x="0" y="0">Driver</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -2198,7 +2200,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st502" transform="translate(32.05 109.76)"><tspan x="0" y="0">0</tspan></text>
+                    <g class="st500">
+                      <text class="st501" transform="translate(32.05 109.76)"><tspan x="0" y="0">0</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -2218,7 +2222,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st501" transform="translate(27.48 100.32)"><tspan x="0" y="0">+</tspan></text>
+                    <g class="st500">
+                      <text class="st503" transform="translate(27.48 100.32)"><tspan x="0" y="0">+</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -2237,7 +2243,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st502" transform="translate(27.18 119.2)"><tspan x="0" y="0">-</tspan></text>
+                    <g class="st500">
+                      <text class="st501" transform="translate(27.18 119.2)"><tspan x="0" y="0">-</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -2767,7 +2775,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st504" transform="translate(44.54 124.69)"><tspan x="0" y="0">Baseline</tspan></text>
+                    <g class="st500">
+                      <text class="st504" transform="translate(44.54 124.69)"><tspan x="0" y="0">Baseline</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -2786,14 +2796,18 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st503" transform="translate(71.68 78.58)"><tspan x="0" y="0">SHAP</tspan></text>
+                    <g class="st500">
+                      <text class="st502" transform="translate(71.68 78.58)"><tspan x="0" y="0">SHAP</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st503" transform="translate(71.68 86.58)"><tspan x="0" y="0">value</tspan></text>
+                    <g class="st500">
+                      <text class="st502" transform="translate(71.68 86.58)"><tspan x="0" y="0">value</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -3321,7 +3335,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st503" transform="translate(119.84 51.75)"><tspan x="0" y="0">Turnovers</tspan></text>
+                    <g class="st500">
+                      <text class="st502" transform="translate(119.84 51.75)"><tspan x="0" y="0">Turnovers</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -3848,7 +3864,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st503" transform="translate(139.15 145.27)"><tspan x="0" y="0">Favorability shifts</tspan></text>
+                    <g class="st500">
+                      <text class="st502" transform="translate(139.15 145.27)"><tspan x="0" y="0">Favorability shifts</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -3898,7 +3916,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st503" transform="translate(189.24 54.93)"><tspan x="0" y="0">Area</tspan></text>
+                    <g class="st500">
+                      <text class="st502" transform="translate(189.24 54.93)"><tspan x="0" y="0">Area</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -4940,7 +4960,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(108.04 108.13)"><tspan x="0" y="0">Favorable</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(108.04 108.13)"><tspan x="0" y="0">Favorable</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -4959,7 +4981,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(104.17 137.02)"><tspan x="0" y="0">Disfavorable</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(104.17 137.02)"><tspan x="0" y="0">Disfavorable</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -4978,7 +5002,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(132.6 120.01)"><tspan x="0" y="0">Overlap</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(132.6 120.01)"><tspan x="0" y="0">Overlap</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5010,14 +5036,18 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(201.38 120.65)"><tspan x="0" y="0">Extract</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(201.38 120.65)"><tspan x="0" y="0">Extract</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(201.38 131.65)"><tspan x="0" y="0">Median</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(201.38 131.65)"><tspan x="0" y="0">Median</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5043,21 +5073,27 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(236.99 71.28)"><tspan x="0" y="0">Extract</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(236.99 71.28)"><tspan x="0" y="0">Extract</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(229.13 77.28)"><tspan x="0" y="0">median over</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(229.13 77.28)"><tspan x="0" y="0">median over</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st503" transform="translate(233.06 88.28)"><tspan x="0" y="0">species</tspan></text>
+                    <g class="st500">
+                      <text class="st502" transform="translate(233.06 88.28)"><tspan x="0" y="0">species</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5099,7 +5135,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(281.83 90.15)"><tspan x="0" y="0">Area</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(281.83 90.15)"><tspan x="0" y="0">Area</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5118,7 +5156,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(265.6 140.34)"><tspan x="0" y="0">Favorability shift</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(265.6 140.34)"><tspan x="0" y="0">Favorability shift</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5148,7 +5188,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(376.2 95.63)"><tspan x="0" y="0">Area</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(376.2 95.63)"><tspan x="0" y="0">Area</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5203,7 +5245,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(360.04 145.29)"><tspan x="0" y="0">Favorability shift</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(360.04 145.29)"><tspan x="0" y="0">Favorability shift</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5223,7 +5267,9 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(349.51 50.82)"><tspan x="0" y="0">Endangered species only</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(349.51 50.82)"><tspan x="0" y="0">Specialists only</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5242,33 +5288,18 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(318.86 90.22)"><tspan x="0" y="0">All</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(318.86 90.22)"><tspan x="0" y="0">All</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st503" transform="translate(309.57 102.16)"><tspan x="0" y="0">drivers</tspan></text>
-                  </g>
-                </g>
-              </g>
-            </g>
-          </g>
-        </g>
-      </g>
-    </g>
-  </g>
-  <g class="st500">
-    <g class="st500">
-      <g class="st500">
-        <g class="st500">
-          <g class="st500">
-            <g class="st500">
-              <g class="st500">
-                <g class="st500">
-                  <g class="st500">
-                    <text class="st499" transform="translate(189.04 67.3)"><tspan x="0" y="0">Disfavoring</tspan></text>
+                    <g class="st500">
+                      <text class="st502" transform="translate(309.57 102.16)"><tspan x="0" y="0">drivers</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>
@@ -5287,7 +5318,30 @@
               <g class="st500">
                 <g class="st500">
                   <g class="st500">
-                    <text class="st499" transform="translate(194.02 80.34)"><tspan x="0" y="0">Favoring</tspan></text>
+                    <g class="st500">
+                      <text class="st499" transform="translate(189.04 67.3)"><tspan x="0" y="0">Disfavoring</tspan></text>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  <g class="st500">
+    <g class="st500">
+      <g class="st500">
+        <g class="st500">
+          <g class="st500">
+            <g class="st500">
+              <g class="st500">
+                <g class="st500">
+                  <g class="st500">
+                    <g class="st500">
+                      <text class="st499" transform="translate(194.02 80.34)"><tspan x="0" y="0">Favoring</tspan></text>
+                    </g>
                   </g>
                 </g>
               </g>

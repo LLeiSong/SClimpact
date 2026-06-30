@@ -58,7 +58,7 @@ sp_turnovers_tosave <- sp_turnovers %>%
     rename("Species" = sp, "Turnover" = type, 
            "Area (% of habitat)" = perct, "IUCN category" = category,
            "Variable" = feature, "Year" = year, "Scenario" = scenario,
-           "Status" = status)
+           "Status" = status, "Class" = class)
 write.csv(
     sp_turnovers_tosave, file.path(tbl_dir, "supplementary_table1.csv"),
     row.names = FALSE)
@@ -73,7 +73,8 @@ sp_shifts_tosave <- sp_shifts %>%
         "Species" = sp, "IUCN category" = category, "Variable" = feature, 
         "Baseline" = type, "Year" = year, "Scenario" = scenario, 
         "Status" = status, "SHAP value change (median)" = median,
-        "SHAP value change (Q1)" = `1q`, "SHAP value change (Q3)" = `3q`)
+        "SHAP value change (Q1)" = `1q`, "SHAP value change (Q3)" = `3q`,
+        "Class" = class)
 write.csv(
     sp_shifts_tosave, file.path(tbl_dir, "supplementary_table2.csv"),
     row.names = FALSE, na = "")
@@ -108,7 +109,7 @@ sp_turnovers_fig <- sp_turnovers_fig %>%
 mw_test <- lapply(unique(sp_turnovers_fig$feature), function(driver){
     lapply(unique(sp_turnovers_fig$type), function(tp){
         dat <- sp_turnovers_fig %>% filter(feature == driver & type == tp)
-        dat_en <- dat %>% filter(status == "EN")
+        dat_en <- dat %>% filter(class == "specialist")
         wt <- wilcox.test(dat$perct, dat_en$perct)
         data.frame(type = tp,
                    feature = driver,
@@ -128,7 +129,7 @@ mw_test <- lapply(unique(sp_turnovers_fig$feature), function(driver){
                    "P \u2265 0.1")))
 
 en_fig <- sp_turnovers_fig %>% 
-    filter(status == "EN") %>% 
+    filter(class == "specialist") %>% 
     group_by(feature, type, scenario, year, plot_order) %>% 
     summarise(perct = median(perct), .groups = "drop") %>% 
     left_join(mw_test, by = join_by(feature, type))
@@ -190,11 +191,11 @@ p1 <- ggplot(data = sp_turnovers_fig %>% filter(type == "P to N")) +
     geom_point(data = en_fig %>% filter(type == "P to N"), 
                aes(x = plot_order, y = perct, fill = significance), 
                size = 1.6, shape = 21, color = "white", stroke = 0.2) +
-    scale_fill_manual("Median of endangered species  ", values = cols_p) +
+    scale_fill_manual("Median of specialist  ", values = cols_p) +
     scale_x_discrete(labels = function(x){gsub("_P to N|_N to P", "", x)}) +
     scale_y_continuous(labels = function(x){paste0(x, "%")}) +
     coord_flip(ylim = c(0, unlist(xlims[xlims$type == "P to N", c("ymax")]))) +
-    xlab("") + ylab("Area (% of dispersable habitat)") + 
+    xlab("") + ylab("Area (% of accessible habitat)") + 
     guides(fill = guide_legend(override.aes = list(size = 3))) +
     annotate("text", 
              x = (maxs %>% filter(type == "P to N") %>% 
@@ -220,11 +221,11 @@ p2 <- ggplot(data = sp_turnovers_fig %>% filter(type == "N to P")) +
     geom_point(data = en_fig %>% filter(type == "N to P"), 
                aes(x = plot_order, y = perct, fill = significance), 
                size = 1.6, shape = 21, color = "white", stroke = 0.2) +
-    scale_fill_manual("Median of endangered species  ", values = cols_p) +
+    scale_fill_manual("Median of specialist species  ", values = cols_p) +
     scale_x_discrete(labels = function(x){gsub("_P to N|_N to P", "", x)}) +
     scale_y_continuous(labels = function(x){paste0(x, "%")}) +
     coord_flip(ylim = c(0, unlist(xlims[xlims$type == "N to P", c("ymax")]))) +
-    xlab("") + ylab("Area (% of dispersable habitat)") + 
+    xlab("") + ylab("Area (% of accessible habitat)") + 
     guides(fill = guide_legend(override.aes = list(size = 3))) +
     annotate("text", 
              x = (maxs %>% filter(type == "N to P") %>% 
@@ -257,7 +258,7 @@ sp_shifts_fig <- sp_shifts_fig %>%
 mw_test <- lapply(unique(sp_shifts_fig$feature), function(driver){
     lapply(unique(sp_shifts_fig$type), function(tp){
         dat <- sp_shifts_fig %>% filter(feature == driver & type == tp)
-        dat_en <- dat %>% filter(status == "EN")
+        dat_en <- dat %>% filter(class == "specialist")
         wt <- wilcox.test(dat$median, dat_en$median)
         data.frame(type = tp,
                    feature = driver,
@@ -277,7 +278,7 @@ mw_test <- lapply(unique(sp_shifts_fig$feature), function(driver){
                    "P \u2265 0.1")))
 
 en_fig <- sp_shifts_fig %>% 
-    filter(status == "EN") %>% 
+    filter(class == "specialist") %>% 
     group_by(feature, type, scenario, year, plot_order) %>% 
     summarise(median = median(median), .groups = "drop") %>% 
     left_join(mw_test, by = join_by(feature, type))
@@ -322,7 +323,7 @@ p2 <- ggplot(data = sp_shifts_fig %>% filter(type == "P")) +
     geom_point(data = en_fig %>% filter(type == "P"), 
                aes(x = plot_order, y = median, fill = significance), 
                size = 1.6, shape = 21, color = "white", stroke = 0.2) +
-    scale_fill_manual("Median of endangered species  ", values = cols_p) +
+    scale_fill_manual("Median of specialist species  ", values = cols_p) +
     scale_x_discrete(labels = function(x){gsub("_P|_N", "", x)}) +
     coord_flip(ylim = unlist(xlims[xlims$type == "P", c('ymin', "ymax")])) +
     xlab("") + ylab("\u2206 SHAP") + 
@@ -353,7 +354,7 @@ p3 <- ggplot(data = sp_shifts_fig %>% filter(type == "N")) +
     geom_point(data = en_fig %>% filter(type == "N"), 
                aes(x = plot_order, y = median, fill = significance), 
                size = 1.6, shape = 21, color = "white", stroke = 0.2) +
-    scale_fill_manual("Median of endangered species  ", values = cols_n) +
+    scale_fill_manual("Median of specialist species  ", values = cols_n) +
     scale_x_discrete(labels = function(x){gsub("_P|_N", "", x)}) +
     coord_flip(ylim = unlist(xlims[xlims$type == "N", c('ymin', "ymax")])) +
     xlab("") + ylab("\u2206 SHAP") + 
@@ -373,7 +374,7 @@ lgd_orig <- ggplot() +
     geom_point(data = en_fig, 
                aes(x = plot_order, y = median, color = significance), 
                size = 1.6) +
-    scale_color_manual(name = " Median of endangered species ", 
+    scale_color_manual(name = " Median of specialist species ", 
                        values = cols$colors) +
     theme_pubclean(base_size = 12) + 
     theme(legend.position = "bottom",
@@ -413,67 +414,56 @@ ggsave(file.path(fig_dir, "Figure2_driver_species.png"),
 
 ##### Extended Data Table 1 ####
 en_max_fig <- sp_turnovers_fig %>% 
-    filter(status == "EN") %>% 
     mutate(type = case_when(
         type == "P to N" ~ "Disfavoring",
         type == "N to P" ~ "Favoring")) %>% 
-    group_by(feature, type, scenario, year) %>% 
-    arrange(-perct) %>% slice_head(n = 1) %>% 
-    arrange(desc(type), desc(plot_order)) %>% 
-    ungroup() %>% select(type, feature, sp, perct, category) %>% 
-    mutate(perct = round(perct, 2)) %>% 
-    rename("Variable" = feature, "Turnover" = type, "Species" = sp, 
-           "Area (% of \ndispersable-habitat)" = perct, "IUCN category" = category)
+    mutate(type = factor(
+        type, levels = c("Disfavoring", "Favoring"),
+        labels = c("Disfavoring", "Favoring"))) %>% 
+    group_by(feature, plot_order, type, class) %>% 
+    summarise(q1 = quantile(perct, 0.25),
+              q3 = quantile(perct, 0.75),
+              median = quantile(perct, 0.5),
+              .groups = "drop") %>% 
+    arrange(type, desc(plot_order)) %>% ungroup() %>% 
+    mutate(val = sprintf("%.2f (%.2f - %.2f)", median, q1, q3)) %>% 
+    select(type, feature, class, val) %>% 
+    filter(class != "intermediate") %>% 
+    pivot_wider(names_from = class, values_from = val) %>% 
+    rename("Variable" = feature, "Turnover" = type, 
+           "Specialist" = specialist, "Generalist" = generalist)
 
-en_max_fig %>% mutate(Species = sprintf(" %s ", Species)) %>% 
-    flextable() %>% autofit() %>% 
-    bg(bg = "white", part = "all") %>% 
-    align(align = "left", part = "all") %>% 
-    bold(part = "header") %>% 
-    merge_at(i = 1:16, j = 1) %>% 
-    merge_at(i = 17:32, j = 1) %>% 
-    # Add some lines
-    border(i = 16, j = 1:5, 
-           border.bottom = fp_border(color = "gray")) %>% 
-    save_as_image(file.path(fig_dir, "extended_data_table1.png"), res = 500)
+write.csv(en_max_fig, file.path(fig_dir, "extended_data_table1.csv"),
+          row.names = FALSE)
 
 ##### Extended Data Table 2 ####
 en_max_fig <- sp_shifts_fig %>% 
-    mutate(median_order = ifelse(type == "P", -median, median)) %>% 
-    filter(status == "EN") %>% 
     mutate(type = case_when(
         type == "P" ~ "Favorable area",
         type == "N" ~ "Unfavorable area")) %>% 
-    group_by(feature, type, scenario, year) %>% 
-    arrange(-median_order) %>% slice_head(n = 1) %>% 
-    arrange(type, desc(type), desc(plot_order)) %>% 
-    ungroup() %>% 
-    mutate(label = sprintf(" %.2f (%.2f-%.2f) ", median, `1q`, `3q`)) %>% 
-    select(type, feature, sp, label, category) %>% 
-    rename("Variable" = feature, "Baseline" = type, "Species" = sp, 
-           "SHAP value change\nMedian (Q1 - Q3)" = label, 
-           "IUCN category" = category)
+    mutate(type = factor(
+        type, levels = c("Favorable area", "Unfavorable area"),
+        labels = c("Favorable area", "Unfavorable area"))) %>% 
+    group_by(feature, plot_order, type, class) %>% 
+    summarise(val = mean(median),
+              .groups = "drop") %>% 
+    arrange(type, desc(plot_order)) %>% ungroup() %>% 
+    mutate(val = sprintf(" %.3f", val)) %>% 
+    select(type, feature, class, val) %>% 
+    filter(class != "intermediate") %>% 
+    pivot_wider(names_from = class, values_from = val) %>% 
+    rename("Variable" = feature, "Baseline" = type, 
+           "Specialist" = specialist, "Generalist" = generalist)
 
-en_max_fig %>% mutate(Species = sprintf(" %s ", Species)) %>% 
-    flextable() %>% autofit() %>% 
-    bg(bg = "white", part = "all") %>% 
-    align(align = "left", part = "all") %>% 
-    align(i = 1, j = 4, align = "center", part = "header") %>% 
-    bold(part = "header") %>% 
-    merge_at(i = 1:16, j = 1) %>% 
-    merge_at(i = 17:32, j = 1) %>% 
-    # Add some lines
-    border(i = 16, j = 1:5, 
-           border.bottom = fp_border(color = "gray")) %>% 
-    save_as_image(file.path(fig_dir, "extended_data_table2.png"), res = 500)
+write.csv(en_max_fig, file.path(fig_dir, "extended_data_table2.csv"),
+          row.names = FALSE)
 
 ##### Extended Data Fig.1 and Fig.2 ####
 
 # Fig. 1
 inds <- c(letters[1:5], letters[5:8])
 figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
-    figs <- lapply(c("2011-2040", "2041-2070", "2071-2100"), 
-                   function(time_period){
+    figs <- lapply(c("2011-2040", "2041-2070", "2071-2100"), function(time_period){
         sp_analysis_fig <- sp_turnovers %>% 
             filter(scenario == ssp & year == time_period)
         
@@ -498,7 +488,7 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
             lapply(unique(sp_analysis_fig$type), function(tp){
                 dat <- sp_analysis_fig %>% 
                     filter(feature == driver & type == tp)
-                dat_en <- dat %>% filter(status == "EN")
+                dat_en <- dat %>% filter(class == "specialist")
                 wt <- wilcox.test(dat$perct, dat_en$perct)
                 data.frame(type = tp,
                            feature = driver,
@@ -518,7 +508,7 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
                            "P \u2265 0.1")))
         
         en_fig <- sp_analysis_fig %>% 
-            filter(status == "EN") %>% 
+            filter(class == "specialist") %>% 
             group_by(feature, type, scenario, year, plot_order) %>% 
             summarise(perct = median(perct), .groups = "drop") %>% 
             left_join(mw_test, by = join_by(feature, type))
@@ -557,7 +547,7 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
                     })}) +
                 scale_y_continuous(labels = function(x){paste0(x, "%")}) +
                 theme_pubclean(base_size = 12) + 
-                xlab("") + ylab("Area (% of dispersable habitat)") + 
+                xlab("") + ylab("Area (% of accessible habitat)") + 
                 ggtitle(sprintf("%s. %s, %s", ind, ssp, time_period)) +
                 facet_wrap(
                     ~factor(type, levels = c("P to N", "N to P"),
@@ -612,8 +602,7 @@ ggsave(file.path(fig_dir, "extended_data_fig1.png"),
 # Fig.2
 inds <- c(letters[1:5], letters[5:8])
 figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
-    figs <- lapply(c("2011-2040", "2041-2070", "2071-2100"), 
-                   function(time_period){
+    figs <- lapply(c("2011-2040", "2041-2070", "2071-2100"), function(time_period){
         sp_analysis_fig <- sp_shifts %>% 
             filter(scenario == ssp & year == time_period)
         
@@ -639,7 +628,7 @@ figs <- lapply(c("ssp126", "ssp370", "ssp585"), function(ssp){
             lapply(unique(sp_analysis_fig$type), function(tp){
                 dat <- sp_analysis_fig %>% 
                     filter(feature == driver & type == tp)
-                dat_en <- dat %>% filter(status == "EN")
+                dat_en <- dat %>% filter(class == "specialist")
                 wt <- wilcox.test(dat$median, dat_en$median)
                 data.frame(type = tp,
                            feature = driver,
